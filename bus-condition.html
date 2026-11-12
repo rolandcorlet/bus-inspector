@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bus Condition Report</title>
+  <style>
+    :root {
+      --color-primary: #187A35;
+      --color-primary-dark: #135f2a;
+      --color-primary-light: #e8f5ec;
+      --color-primary-soft: rgba(24, 122, 53, 0.12);
+
+      --color-pass: #187A35;
+      --color-pass-bg: #e8f5ec;
+      --color-pass-border: #bfe3cb;
+
+      --color-warn: #d97706;
+      --color-warn-bg: #fef3c7;
+      --color-warn-border: #fde68a;
+
+      --color-fail: #ef4444;
+      --color-fail-bg: #fee2e2;
+      --color-fail-border: #fecaca;
+
+      --color-bg: #ffffff;
+      --color-surface: #ffffff;
+      --color-text: #111827;
+      --color-text-secondary: #5f6773;
+      --color-text-tertiary: #9aa1ad;
+
+      --color-border: #e5e7eb;
+      --color-border-strong: #cfe8d8;
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.16);
+
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-full: 50%;
+
+      --header-height: 60px;
+      --progress-height: 3px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="dark"] {
+      --color-primary: #35b56a;
+      --color-primary-dark: #2fae65;
+      --color-primary-light: #123524;
+      --color-primary-soft: rgba(53, 181, 106, 0.18);
+
+      --color-pass: #2fae65;
+      --color-pass-bg: #123524;
+      --color-pass-border: #235c39;
+
+      --color-warn: #f59e0b;
+      --color-warn-bg: #451a03;
+      --color-warn-border: #78350f;
+
+      --color-fail: #ef4444;
+      --color-fail-bg: #7f1d1d;
+      --color-fail-border: #7f1d1d;
+
+      --color-bg: #0f1117;
+      --color-surface: #1e2130;
+      --color-text: #f1f3f9;
+      --color-text-secondary: #8b90a0;
+      --color-text-tertiary: #5a5f72;
+
+      --color-border: #2d3148;
+      --color-border-strong: #235c39;
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.30);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.40);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.55);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-top: calc(var(--header-height) + var(--progress-height) + 30px);
+      transition: background var(--transition), color var(--transition);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: var(--color-surface);
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      border-bottom: 1px solid var(--color-border);
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .header::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #187A35, #2e8b57, #3aa968);
+      z-index: 2;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 38px;
+      padding: 0 10px;
+      border-radius: 10px;
+      border: 1.5px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-primary);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      transition: all var(--transition);
+    }
+
+    .back-link:hover {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .header-title {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 1.08rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      text-align: center;
+      color: var(--color-text);
+    }
+
+    .theme-toggle {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-full);
+      border: 2px solid var(--color-border);
+      background: var(--color-surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: all var(--transition);
+      color: var(--color-text);
+      flex-shrink: 0;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .progress-container {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      right: 0;
+      height: var(--progress-height);
+      background: var(--color-border);
+      z-index: 999;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #187A35, #35b56a);
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .progress-label {
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--color-text-secondary);
+      padding: 7px 0;
+      position: fixed;
+      top: calc(var(--header-height) + var(--progress-height));
+      left: 0;
+      right: 0;
+      z-index: 998;
+      background: var(--color-bg);
+    }
+
+    .clear-button-container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 12px 14px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .clear-button {
+      width: 100%;
+      max-width: 260px;
+      min-height: 44px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: inherit;
+      color: var(--color-fail);
+      background: var(--color-surface);
+      border: 2px solid var(--color-fail-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .clear-button:hover {
+      background: var(--color-fail-bg);
+    }
+
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 12px 14px 120px;
+    }
+
+    .card {
+      background: var(--color-surface);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 14px;
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      transition: all var(--transition);
+    }
+
+    .card:focus-within {
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-primary);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 16px 10px;
+    }
+
+    .card-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-full);
+      background: var(--color-primary-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.15rem;
+    }
+
+    .card-label {
+      flex: 1;
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: var(--color-text);
+    }
+
+    .card-body {
+      padding: 0 16px 16px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 8px;
+      margin-top: 12px;
+    }
+
+    .card-body .field-label:first-child {
+      margin-top: 0;
+    }
+
+    .required-dot {
+      display: inline-block;
+      background: var(--color-fail);
+      color: white;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .text-input {
+      width: 100%;
+      min-height: 50px;
+      padding: 12px 14px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: 2px solid var(--color-border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      color: var(--color-text);
+      transition: all var(--transition);
+      -webkit-appearance: none;
+    }
+
+    .text-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 4px var(--color-primary-soft);
+    }
+
+    .text-input.error {
+      border-color: var(--color-fail);
+      box-shadow: 0 0 0 4px var(--color-fail-bg);
+    }
+
+    .bus-id-input {
+      min-height: 58px;
+      font-size: 1.2rem;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .date-time-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .date-time-grid .field-label {
+      margin-top: 0;
+    }
+
+    .now-btn {
+      margin-top: 10px;
+      width: 100%;
+      min-height: 40px;
+      border-radius: 8px;
+      border: 1.5px dashed var(--color-primary);
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+      font-size: 0.82rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .now-btn:hover {
+      background: var(--color-primary-light);
+    }
+
+    .now-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Camera Capture Section */
+    .camera-hero-btn {
+      width: 100%;
+      min-height: 60px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, #187A35, #135f2a);
+      color: #ffffff;
+      font-size: 1.05rem;
+      font-weight: 800;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(24, 122, 53, 0.28);
+      transition: all var(--transition);
+    }
+
+    .camera-hero-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(24, 122, 53, 0.36);
+    }
+
+    .camera-hero-btn:active {
+      transform: scale(0.98);
+    }
+
+    .secondary-photo-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .gallery-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 40px;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      font-family: inherit;
+      border: 1.5px solid var(--color-border-strong);
+      border-radius: 8px;
+      background: var(--color-surface);
+      color: var(--color-primary);
+      cursor: pointer;
+    }
+
+    .gallery-btn:hover {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .photo-counter-pill {
+      font-size: 0.8rem;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+    }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .photo-card {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--color-border);
+      background: #000;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-card-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+      color: #fff;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 12px 6px 4px;
+      text-align: center;
+    }
+
+    .photo-card-btn {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: none;
+      font-size: 0.72rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    }
+
+    .photo-remove-btn {
+      top: 5px;
+      right: 5px;
+      background: rgba(220, 38, 38, 0.9);
+      color: #fff;
+    }
+
+    .photo-save-btn {
+      top: 5px;
+      left: 5px;
+      background: rgba(24, 122, 53, 0.9);
+      color: #fff;
+    }
+
+    .empty-photos-hint {
+      margin-top: 12px;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1.5px dashed var(--color-border);
+      text-align: center;
+      font-size: 0.84rem;
+      color: var(--color-text-secondary);
+    }
+
+    /* Condition Status Pills */
+    .status-pills {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .status-pill {
+      min-height: 44px;
+      padding: 8px 6px;
+      border-radius: 10px;
+      border: 2px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-text-secondary);
+      font-size: 0.78rem;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--transition);
+    }
+
+    .status-pill.active-good {
+      background: var(--color-pass-bg);
+      border-color: var(--color-pass);
+      color: var(--color-pass);
+    }
+
+    .status-pill.active-clean {
+      background: var(--color-warn-bg);
+      border-color: var(--color-warn);
+      color: var(--color-warn);
+    }
+
+    .status-pill.active-damage {
+      background: var(--color-fail-bg);
+      border-color: var(--color-fail);
+      color: var(--color-fail);
+    }
+
+    .comment-area {
+      width: 100%;
+      min-height: 84px;
+      padding: 12px 14px;
+      font-size: 0.94rem;
+      font-family: inherit;
+      border: 2px solid var(--color-border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      color: var(--color-text);
+      resize: vertical;
+    }
+
+    .comment-area:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 4px var(--color-primary-soft);
+    }
+
+    /* Submit & Download Actions */
+    .submit-area {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .submit-btn {
+      width: 100%;
+      min-height: 58px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      font-family: inherit;
+      color: white;
+      background: linear-gradient(135deg, #187A35, #135f2a);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 18px rgba(24, 122, 53, 0.32);
+    }
+
+    .submit-btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .submit-btn.loading .spinner {
+      display: block;
+    }
+
+    .submit-btn.loading .btn-text {
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .recipient-note {
+      margin-top: 8px;
+      font-size: 0.76rem;
+      color: var(--color-text-secondary);
+    }
+
+    .actions {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .actions.visible {
+      display: flex;
+    }
+
+    .action-btn {
+      width: 100%;
+      min-height: 48px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      font-family: inherit;
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--color-surface);
+      color: var(--color-primary);
+    }
+
+    .action-btn:hover {
+      background: var(--color-primary-light);
+      border-color: var(--color-primary);
+    }
+
+    /* Toast & Lightbox */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: #1e2130;
+      color: white;
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      font-size: 0.88rem;
+      font-weight: 600;
+      z-index: 10000;
+      transition: transform 0.3s ease;
+      max-width: 90%;
+      text-align: center;
+    }
+
+    .toast.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,0.92);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .lightbox.visible {
+      display: flex;
+    }
+
+    .lightbox img {
+      max-width: 100%;
+      max-height: 75vh;
+      border-radius: var(--radius-md);
+      object-fit: contain;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+      border: none;
+      color: white;
+      font-size: 1.3rem;
+      cursor: pointer;
+    }
+
+    .lightbox-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .lightbox-action-btn {
+      min-height: 44px;
+      padding: 8px 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: inherit;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    .lightbox-action-btn.primary {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .lightbox-action-btn.secondary {
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+
+    @media (max-width: 400px) {
+      .date-time-grid {
+        grid-template-columns: 1fr;
+      }
+      .status-pills {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header" role="banner">
+    <a href="index.html" class="back-link" aria-label="Back to Bus Reports Portal">← Portal</a>
+    <h1 class="header-title">
+      <span aria-hidden="true">🚌</span>
+      Bus Condition
+    </h1>
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">🌙</button>
+  </header>
+
+  <div class="progress-container" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">Enter Bus ID &amp; take photos</div>
+
+  <div class="clear-button-container">
+    <button type="button" class="clear-button" id="clearBtn">🗑️ Clear &amp; Start New Bus</button>
+  </div>
+
+  <main class="container" id="main" role="main">
+    <!-- Card 1: Bus, Date & Time -->
+    <section class="card" aria-label="Bus, Date and Time">
+      <div class="card-header">
+        <div class="card-icon">🚌</div>
+        <h2 class="card-label">Bus, Date &amp; Time</h2>
+      </div>
+      <div class="card-body">
+        <label class="field-label" for="busId">Bus / Vehicle ID <span class="required-dot">REQUIRED</span></label>
+        <input
+          type="text"
+          id="busId"
+          class="text-input bus-id-input"
+          placeholder="e.g. BUS 001 / REGO"
+          required
+          autocomplete="off"
+          spellcheck="false"
+        >
+
+        <div class="date-time-grid">
+          <div>
+            <label class="field-label" for="reportDate">Date <span class="required-dot">REQUIRED</span></label>
+            <input type="date" id="reportDate" class="text-input" required>
+          </div>
+          <div>
+            <label class="field-label" for="reportTime">Time <span class="required-dot">REQUIRED</span></label>
+            <input type="time" id="reportTime" class="text-input" required>
+          </div>
+        </div>
+
+        <button type="button" class="now-btn" id="setNowBtn">🕒 Update to Current Date &amp; Time</button>
+
+        <label class="field-label" for="driverName">Driver / Inspector Name (Optional)</label>
+        <input
+          type="text"
+          id="driverName"
+          class="text-input"
+          placeholder="Enter driver or inspector name"
+          autocomplete="off"
+          spellcheck="false"
+        >
+      </div>
+    </section>
+
+    <!-- Card 2: Bus Condition Photos -->
+    <section class="card" aria-label="Bus Condition Photos">
+      <div class="card-header">
+        <div class="card-icon">📷</div>
+        <h2 class="card-label">Bus Condition Photos</h2>
+      </div>
+      <div class="card-body">
+        <button type="button" class="camera-hero-btn" id="takePhotoBtn">
+          📸 Take Bus Photo
+        </button>
+
+        <div class="secondary-photo-row">
+          <button type="button" class="gallery-btn" id="galleryPhotoBtn">🖼️ Add from Gallery</button>
+          <input type="file" id="galleryInput" accept="image/*" multiple hidden>
+          <span class="photo-counter-pill" id="photoCounterPill">0 photos</span>
+        </div>
+
+        <div id="emptyPhotosHint" class="empty-photos-hint">
+          Tap <strong>Take Bus Photo</strong> above to open the camera immediately and add photos of the bus.
+        </div>
+
+        <div class="photo-grid" id="photoGrid"></div>
+        <div id="sizeWarn" style="display:none;font-size:0.75rem;color:var(--color-warn);margin-top:8px;">
+          ⚠️ Total photo size exceeds 10 MB.
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 3: Condition Status & Notes -->
+    <section class="card" aria-label="Condition Notes">
+      <div class="card-header">
+        <div class="card-icon">📝</div>
+        <h2 class="card-label">Condition Status &amp; Notes</h2>
+      </div>
+      <div class="card-body">
+        <label class="field-label">Overall Condition</label>
+        <div class="status-pills" role="group" aria-label="Overall bus condition">
+          <button type="button" class="status-pill active-good" data-status="Good Condition">✓ Good</button>
+          <button type="button" class="status-pill" data-status="Needs Cleaning">🧹 Cleaning</button>
+          <button type="button" class="status-pill" data-status="Damage / Defect Noted">⚠️ Damage</button>
+        </div>
+
+        <label class="field-label" for="conditionNotes">Notes / Comments (Optional)</label>
+        <textarea
+          id="conditionNotes"
+          class="comment-area"
+          placeholder="Add any notes about exterior panels, interior, tyres, cleanliness, or existing marks..."
+          rows="3"
+        ></textarea>
+      </div>
+    </section>
+
+    <!-- Submit & Export -->
+    <div class="submit-area">
+      <button type="button" id="sendEmailBtn" class="submit-btn">
+        <span class="spinner"></span>
+        <span class="btn-text">📧 Send Bus Condition &amp; Photos</span>
+      </button>
+      <div class="recipient-note">
+        Sends Bus ID, Date, Time &amp; Photos to <strong>transportbusreports@gmail.com</strong> and saves to Downloads.
+      </div>
+
+      <div class="actions" id="actionBox">
+        <button type="button" class="action-btn" id="dlHtmlBtn">📄 Download HTML Report</button>
+        <button type="button" class="action-btn" id="dlPhotosBtn">📸 Download All Photos</button>
+        <button type="button" class="action-btn" id="dlJsonBtn">📦 Download JSON Data</button>
+        <button type="button" class="action-btn" id="dlCsvBtn">📊 Download CSV Data</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo preview">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Close">✕</button>
+    <img id="lightboxImg" src="" alt="Bus Condition Photo">
+    <div class="lightbox-actions">
+      <button type="button" class="lightbox-action-btn primary" id="lightboxDownload">⬇️ Save Photo</button>
+      <button type="button" class="lightbox-action-btn secondary" id="lightboxDismiss">Close</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="android-email.js"></script>
+  <script>
+    const CONFIG = {
+      TARGET_EMAIL: "transportbusreports@gmail.com",
+      STORAGE_KEY: "bus_condition_report_draft",
+      MAX_PHOTO_BYTES: 10 * 1024 * 1024
+    };
+
+    function getNowDateString() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function getNowTimeString() {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function createInitialState() {
+      return {
+        busId: "",
+        reportDate: getNowDateString(),
+        reportTime: getNowTimeString(),
+        driverName: "",
+        conditionStatus: "Good Condition",
+        conditionNotes: "",
+        photos: [],
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    let state = createInitialState();
+    let report = null;
+    let totalPhotoBytes = 0;
+    let saveTimer = null;
+    let lightboxSrc = null;
+    let lightboxName = null;
+    let toastTimer = null;
+
+    // Theme Setup
+    (function initTheme() {
+      const saved = localStorage.getItem("theme") || localStorage.getItem("safety_hazard_theme") || localStorage.getItem("traffic_incident_theme");
+      if (saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeToggle").textContent = "☀️";
+      }
+    })();
+
+    document.getElementById("themeToggle").addEventListener("click", () => {
+      const html = document.documentElement;
+      const isDark = html.getAttribute("data-theme") === "dark";
+      const next = isDark ? "light" : "dark";
+      html.setAttribute("data-theme", next);
+      document.getElementById("themeToggle").textContent = isDark ? "🌙" : "☀️";
+      try {
+        localStorage.setItem("theme", next);
+        localStorage.setItem("safety_hazard_theme", next);
+        localStorage.setItem("traffic_incident_theme", next);
+      } catch (e) {}
+    });
+
+    function loadDraft() {
+      try {
+        const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        state = Object.assign(createInitialState(), parsed);
+        if (!Array.isArray(state.photos)) state.photos = [];
+        totalPhotoBytes = state.photos.reduce((sum, p) => sum + (p.size || 0), 0);
+      } catch (e) {
+        console.warn("Could not load bus condition draft:", e);
+      }
+    }
+
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveDraft, 800);
+    }
+
+    function saveDraft() {
+      try {
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.warn("Draft save quota warning:", e);
+      }
+    }
+
+    function applyStateToForm() {
+      document.getElementById("busId").value = state.busId || "";
+      document.getElementById("reportDate").value = state.reportDate || getNowDateString();
+      document.getElementById("reportTime").value = state.reportTime || getNowTimeString();
+      document.getElementById("driverName").value = state.driverName || "";
+      document.getElementById("conditionNotes").value = state.conditionNotes || "";
+
+      state.reportDate = document.getElementById("reportDate").value;
+      state.reportTime = document.getElementById("reportTime").value;
+
+      updateStatusPillsUI();
+      renderPhotosGrid();
+      updateProgress();
+    }
+
+    function updateStatusPillsUI() {
+      document.querySelectorAll(".status-pill").forEach(btn => {
+        const st = btn.getAttribute("data-status");
+        btn.classList.remove("active-good", "active-clean", "active-damage");
+        if (st === state.conditionStatus) {
+          if (st === "Good Condition") btn.classList.add("active-good");
+          else if (st === "Needs Cleaning") btn.classList.add("active-clean");
+          else btn.classList.add("active-damage");
+        }
+      });
+    }
+
+    function renderPhotosGrid() {
+      const grid = document.getElementById("photoGrid");
+      const hint = document.getElementById("emptyPhotosHint");
+      const pill = document.getElementById("photoCounterPill");
+      const warn = document.getElementById("sizeWarn");
+
+      grid.innerHTML = "";
+      const count = state.photos.length;
+      pill.textContent = `${count} photo${count === 1 ? "" : "s"}`;
+      hint.style.display = count === 0 ? "block" : "none";
+      warn.style.display = totalPhotoBytes > CONFIG.MAX_PHOTO_BYTES ? "block" : "none";
+
+      state.photos.forEach((photo, idx) => {
+        const card = document.createElement("div");
+        card.className = "photo-card";
+
+        const timeLabel = photo.timeShort || state.reportTime || "";
+        card.innerHTML = `
+          <img src="${photo.data}" alt="Bus photo ${idx + 1}">
+          <div class="photo-card-label">#${idx + 1}${timeLabel ? " • " + esc(timeLabel) : ""}</div>
+          <button type="button" class="photo-card-btn photo-save-btn" aria-label="Save photo">⬇</button>
+          <button type="button" class="photo-card-btn photo-remove-btn" aria-label="Remove photo">✕</button>
+        `;
+
+        card.querySelector(".photo-remove-btn").addEventListener("click", (e) => {
+          e.stopPropagation();
+          totalPhotoBytes = Math.max(0, totalPhotoBytes - (photo.size || 0));
+          state.photos.splice(idx, 1);
+          renderPhotosGrid();
+          updateProgress();
+          scheduleSave();
+        });
+
+        card.querySelector(".photo-save-btn").addEventListener("click", (e) => {
+          e.stopPropagation();
+          const filename = buildPhotoFilename(idx + 1);
+          saveSinglePhoto(photo.data, filename);
+        });
+
+        card.addEventListener("click", () => {
+          lightboxSrc = photo.data;
+          lightboxName = buildPhotoFilename(idx + 1);
+          document.getElementById("lightboxImg").src = photo.data;
+          document.getElementById("lightbox").classList.add("visible");
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    function buildPhotoFilename(index) {
+      const bus = safeName(state.busId || "Bus");
+      const dt = (state.reportDate || getNowDateString()).replace(/-/g, "");
+      const tm = (state.reportTime || getNowTimeString()).replace(/:/g, "");
+      return `BusCondition_${bus}_${dt}_${tm}_Photo${index}.jpg`;
+    }
+
+    function saveSinglePhoto(dataUrl, filename) {
+      if (window.BusEmailSystem && typeof window.BusEmailSystem.saveDataUrlToDownloads === "function") {
+        window.BusEmailSystem.saveDataUrlToDownloads(dataUrl, filename);
+        showToast(`✅ Saved ${filename} to Downloads!`);
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function updateProgress() {
+      let steps = 0;
+      if (state.busId && state.busId.trim()) steps++;
+      if (state.reportDate && state.reportTime) steps++;
+      if (state.photos.length > 0) steps++;
+
+      const pct = Math.round((steps / 3) * 100);
+      document.getElementById("progressFill").style.width = `${pct}%`;
+
+      if (steps === 3) {
+        document.getElementById("progressLabel").textContent = `Ready to send — Bus ${state.busId} (${state.photos.length} photo${state.photos.length === 1 ? "" : "s"})`;
+      } else if (!state.busId) {
+        document.getElementById("progressLabel").textContent = `Step 1: Enter Bus ID & take bus photos`;
+      } else {
+        document.getElementById("progressLabel").textContent = `Bus ${state.busId} — Take at least 1 bus photo`;
+      }
+    }
+
+    function addCapturedPhotos(items) {
+      if (!Array.isArray(items) || !items.length) return;
+      const nowTime = getNowTimeString();
+      items.forEach((item) => {
+        if (!item || !item.data) return;
+        const size = item.size || Math.round((item.data.length * 3) / 4);
+        totalPhotoBytes += size;
+        state.photos.push({
+          name: item.name || buildPhotoFilename(state.photos.length + 1),
+          size: size,
+          type: item.type || "image/jpeg",
+          data: item.data,
+          timeShort: nowTime,
+          capturedAt: item.capturedAt || new Date().toISOString()
+        });
+      });
+      renderPhotosGrid();
+      updateProgress();
+      scheduleSave();
+      showToast(`📸 Added ${items.length} photo${items.length > 1 ? "s" : ""}.`);
+    }
+
+    function bindEvents() {
+      const busIdEl = document.getElementById("busId");
+      const dateEl = document.getElementById("reportDate");
+      const timeEl = document.getElementById("reportTime");
+      const driverEl = document.getElementById("driverName");
+      const notesEl = document.getElementById("conditionNotes");
+
+      busIdEl.addEventListener("input", () => {
+        busIdEl.classList.remove("error");
+        state.busId = busIdEl.value.trim();
+        updateProgress();
+        scheduleSave();
+      });
+
+      dateEl.addEventListener("change", () => {
+        state.reportDate = dateEl.value;
+        updateProgress();
+        scheduleSave();
+      });
+
+      timeEl.addEventListener("change", () => {
+        state.reportTime = timeEl.value;
+        updateProgress();
+        scheduleSave();
+      });
+
+      driverEl.addEventListener("input", () => {
+        state.driverName = driverEl.value.trim();
+        scheduleSave();
+      });
+
+      notesEl.addEventListener("input", () => {
+        state.conditionNotes = notesEl.value.trim();
+        scheduleSave();
+      });
+
+      document.getElementById("setNowBtn").addEventListener("click", () => {
+        state.reportDate = getNowDateString();
+        state.reportTime = getNowTimeString();
+        dateEl.value = state.reportDate;
+        timeEl.value = state.reportTime;
+        scheduleSave();
+        showToast(`🕒 Updated to ${state.reportDate} ${state.reportTime}`);
+      });
+
+      document.querySelectorAll(".status-pill").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.conditionStatus = btn.getAttribute("data-status");
+          updateStatusPillsUI();
+          scheduleSave();
+        });
+      });
+
+      // Zero-interruption direct camera capture
+      document.getElementById("takePhotoBtn").addEventListener("click", () => {
+        if (window.BusPhotoCapture && typeof window.BusPhotoCapture.takePhoto === "function") {
+          window.BusPhotoCapture.takePhoto({
+            onCapture: addCapturedPhotos
+          });
+        } else {
+          document.getElementById("galleryInput").click();
+        }
+      });
+
+      // Optional gallery picker
+      const galleryInput = document.getElementById("galleryInput");
+      document.getElementById("galleryPhotoBtn").addEventListener("click", () => {
+        galleryInput.click();
+      });
+
+      galleryInput.addEventListener("change", async (ev) => {
+        const files = Array.from(ev.target.files || []);
+        if (!files.length) return;
+        const processed = [];
+        for (const f of files) {
+          if (f.type && !f.type.startsWith("image/")) continue;
+          try {
+            if (typeof window.compressBusPhoto === "function") {
+              const res = await window.compressBusPhoto(f);
+              processed.push({
+                name: f.name || `bus_photo_${Date.now()}.jpg`,
+                size: res.size,
+                type: res.type || "image/jpeg",
+                data: res.dataUrl
+              });
+            }
+          } catch (err) {
+            console.error(err);
+          }
+        }
+        ev.target.value = "";
+        addCapturedPhotos(processed);
+      });
+
+      document.getElementById("sendEmailBtn").addEventListener("click", onSendBusCondition);
+
+      document.getElementById("dlHtmlBtn").addEventListener("click", () => {
+        report = buildReport();
+        const filename = buildReportFilename("html");
+        const html = generateHtmlReport(report);
+        downloadBlob(html, "text/html", filename);
+      });
+
+      document.getElementById("dlPhotosBtn").addEventListener("click", dlAllPhotos);
+      document.getElementById("dlJsonBtn").addEventListener("click", dlJson);
+      document.getElementById("dlCsvBtn").addEventListener("click", dlCsv);
+      document.getElementById("clearBtn").addEventListener("click", onClear);
+
+      document.getElementById("lightboxClose").addEventListener("click", closeLightbox);
+      document.getElementById("lightboxDismiss").addEventListener("click", closeLightbox);
+      document.getElementById("lightboxDownload").addEventListener("click", () => {
+        if (lightboxSrc) saveSinglePhoto(lightboxSrc, lightboxName || buildPhotoFilename(1));
+      });
+      document.getElementById("lightbox").addEventListener("click", (e) => {
+        if (e.target.id === "lightbox") closeLightbox();
+      });
+    }
+
+    function closeLightbox() {
+      document.getElementById("lightbox").classList.remove("visible");
+      lightboxSrc = null;
+    }
+
+    function buildReport() {
+      const now = new Date();
+      return {
+        type: "Bus Condition Report",
+        busId: state.busId,
+        reportDate: state.reportDate || getNowDateString(),
+        reportTime: state.reportTime || getNowTimeString(),
+        driverName: state.driverName || "",
+        conditionStatus: state.conditionStatus || "Good Condition",
+        conditionNotes: state.conditionNotes || "",
+        generatedAt: now.toISOString(),
+        generatedLocal: now.toLocaleString("en-GB", { hour12: true }),
+        totalPhotos: state.photos.length,
+        photos: state.photos
+      };
+    }
+
+    function buildReportFilename(ext) {
+      const bus = safeName(state.busId || "Bus");
+      const dt = (state.reportDate || getNowDateString()).replace(/-/g, "");
+      const tm = (state.reportTime || getNowTimeString()).replace(/:/g, "");
+      return `bus_condition_${bus}_${dt}_${tm}.${ext}`;
+    }
+
+    function generateHtmlReport(rep) {
+      const statusColor =
+        rep.conditionStatus === "Good Condition"
+          ? "#187A35"
+          : rep.conditionStatus === "Needs Cleaning"
+          ? "#d97706"
+          : "#dc2626";
+
+      let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bus Condition — ${esc(rep.busId)}</title><style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f6f8;color:#111827;padding:18px;max-width:720px;margin:0 auto}
+        .header-box{background:#187A35;color:#fff;padding:18px;border-radius:14px;text-align:center;margin-bottom:14px}
+        .header-box h1{font-size:1.3rem;margin-bottom:4px}
+        .header-box .bus-badge{display:inline-block;background:rgba(255,255,255,0.2);padding:4px 14px;border-radius:999px;font-weight:800;font-size:1.05rem;margin-top:4px}
+        .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08);border-left:4px solid #187A35}
+        .card-title{font-weight:800;font-size:0.95rem;margin-bottom:8px;color:#187A35;text-transform:uppercase;letter-spacing:0.5px}
+        .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.9rem}
+        .meta-item{background:#f9fafb;padding:8px 12px;border-radius:8px}
+        .meta-item span{display:block;font-size:0.72rem;color:#6b7280;text-transform:uppercase;font-weight:700}
+        .meta-item strong{font-size:0.95rem;color:#111827}
+        .status-tag{display:inline-block;padding:4px 10px;border-radius:6px;color:#fff;font-weight:800;font-size:0.85rem;background:${statusColor}}
+        .notes{margin-top:10px;padding:10px 12px;background:#f9fafb;border-radius:8px;white-space:pre-wrap;font-size:0.9rem}
+        .photo-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:10px}
+        .photo-box{border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;background:#fafafa}
+        .photo-box img{width:100%;height:auto;display:block}
+        .photo-caption{padding:8px 10px;font-size:0.78rem;color:#4b5563;font-weight:700;background:#fff;border-top:1px solid #e5e7eb}
+        .footer{text-align:center;font-size:0.75rem;color:#9ca3af;margin-top:18px}
+      </style></head><body>`;
+
+      html += `<div class="header-box"><h1>🚌 Bus Condition Report</h1><div class="bus-badge">BUS: ${esc(rep.busId)}</div></div>`;
+
+      html += `<div class="card"><div class="card-title">📋 Bus, Date &amp; Time Details</div><div class="meta-grid">`;
+      html += `<div class="meta-item"><span>Bus / Vehicle ID</span><strong>${esc(rep.busId)}</strong></div>`;
+      html += `<div class="meta-item"><span>Date &amp; Time</span><strong>${esc(rep.reportDate)} at ${esc(rep.reportTime)}</strong></div>`;
+      html += `<div class="meta-item"><span>Driver / Inspector</span><strong>${esc(rep.driverName || "N/A")}</strong></div>`;
+      html += `<div class="meta-item"><span>Condition Status</span><div><span class="status-tag">${esc(rep.conditionStatus)}</span></div></div>`;
+      html += `</div>`;
+      if (rep.conditionNotes) {
+        html += `<div class="notes"><strong>Notes:</strong>\n${esc(rep.conditionNotes)}</div>`;
+      }
+      html += `</div>`;
+
+      if (rep.photos && rep.photos.length) {
+        html += `<div class="card"><div class="card-title">📷 Bus Condition Photos (${rep.photos.length})</div><div class="photo-list">`;
+        rep.photos.forEach((p, idx) => {
+          html += `<div class="photo-box"><img src="${p.data}" alt="Bus Photo ${idx + 1}"><div class="photo-caption">Photo #${idx + 1} • Bus ${esc(rep.busId)} • ${esc(rep.reportDate)} ${esc(p.timeShort || rep.reportTime)}</div></div>`;
+        });
+        html += `</div></div>`;
+      }
+
+      html += `<div class="footer">Generated: ${esc(rep.generatedLocal)} • Sent to ${esc(CONFIG.TARGET_EMAIL)}</div></body></html>`;
+      return html;
+    }
+
+    async function onSendBusCondition() {
+      const busIdEl = document.getElementById("busId");
+      state.busId = busIdEl.value.trim();
+      state.reportDate = document.getElementById("reportDate").value || getNowDateString();
+      state.reportTime = document.getElementById("reportTime").value || getNowTimeString();
+      state.driverName = document.getElementById("driverName").value.trim();
+      state.conditionNotes = document.getElementById("conditionNotes").value.trim();
+
+      if (!state.busId) {
+        busIdEl.classList.add("error");
+        busIdEl.focus();
+        showToast("⚠️ Please enter the Bus / Vehicle ID.");
+        return;
+      }
+
+      if (state.photos.length === 0) {
+        showToast("⚠️ Please take at least 1 photo of the bus.");
+        return;
+      }
+
+      const btn = document.getElementById("sendEmailBtn");
+      btn.classList.add("loading");
+      btn.disabled = true;
+
+      try {
+        report = buildReport();
+        const filename = buildReportFilename("html");
+        const htmlContent = generateHtmlReport(report);
+
+        const subject = `Bus Condition: Bus ${report.busId} — ${report.reportDate} ${report.reportTime}`;
+        const bodyLines = [
+          `BUS CONDITION REPORT`,
+          `Bus / Vehicle ID: ${report.busId}`,
+          `Date: ${report.reportDate}`,
+          `Time: ${report.reportTime}`,
+          `Condition Status: ${report.conditionStatus}`,
+          `Driver / Inspector: ${report.driverName || "N/A"}`,
+          `Photos Attached: ${report.totalPhotos}`,
+          report.conditionNotes ? `Notes: ${report.conditionNotes}` : "",
+          ``,
+          `[Bus condition photos and full HTML report attached]`
+        ].filter(Boolean).join("\r\n");
+
+        document.getElementById("actionBox").classList.add("visible");
+
+        if (window.sendBusEmail) {
+          const sent = await window.sendBusEmail({
+            to: CONFIG.TARGET_EMAIL,
+            subject: subject,
+            body: bodyLines,
+            htmlContent: htmlContent,
+            filename: filename,
+            savePhotosToDownloads: true
+          });
+          if (sent) {
+            showToast(`✅ Saved to Downloads & opened email to ${CONFIG.TARGET_EMAIL}!`);
+            return;
+          }
+        }
+
+        downloadBlob(htmlContent, "text/html", filename);
+        window.location.href = `mailto:${CONFIG.TARGET_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines)}`;
+      } catch (e) {
+        console.error(e);
+        showToast("❌ Failed to generate Bus Condition report.");
+      } finally {
+        btn.classList.remove("loading");
+        btn.disabled = false;
+      }
+    }
+
+    function dlAllPhotos() {
+      if (!state.photos.length) {
+        showToast("📸 No photos to download.");
+        return;
+      }
+      state.photos.forEach((p, idx) => {
+        setTimeout(() => {
+          saveSinglePhoto(p.data, buildPhotoFilename(idx + 1));
+        }, idx * 250);
+      });
+      showToast(`📸 Saved ${state.photos.length} photo(s) to Downloads!`);
+    }
+
+    function dlJson() {
+      report = buildReport();
+      downloadBlob(JSON.stringify(report, null, 2), "application/json", buildReportFilename("json"));
+    }
+
+    function dlCsv() {
+      report = buildReport();
+      let csv = "Field,Value\n";
+      csv += `Bus ID,"${(report.busId || "").replace(/"/g, '""')}"\n`;
+      csv += `Date,"${(report.reportDate || "").replace(/"/g, '""')}"\n`;
+      csv += `Time,"${(report.reportTime || "").replace(/"/g, '""')}"\n`;
+      csv += `Driver Name,"${(report.driverName || "").replace(/"/g, '""')}"\n`;
+      csv += `Condition Status,"${(report.conditionStatus || "").replace(/"/g, '""')}"\n`;
+      csv += `Notes,"${(report.conditionNotes || "").replace(/"/g, '""')}"\n`;
+      csv += `Photo Count,"${report.totalPhotos}"\n`;
+      downloadBlob(csv, "text/csv", buildReportFilename("csv"));
+    }
+
+    function downloadBlob(content, mime, filename) {
+      if (window.BusEmailSystem && typeof window.BusEmailSystem.saveFileToDownloads === "function") {
+        window.BusEmailSystem.saveFileToDownloads(content, filename, mime, false);
+        showToast(`✅ Saved ${filename} to Downloads!`);
+        return;
+      }
+      const blob = new Blob([content], { type: mime + ";charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function onClear() {
+      if (!confirm("Clear Bus Condition form and photos?")) return;
+      try {
+        localStorage.removeItem(CONFIG.STORAGE_KEY);
+      } catch (e) {}
+      state = createInitialState();
+      totalPhotoBytes = 0;
+      report = null;
+      applyStateToForm();
+      document.getElementById("actionBox").classList.remove("visible");
+      showToast("Form cleared.");
+    }
+
+    function esc(s) {
+      const d = document.createElement("div");
+      d.textContent = s == null ? "" : String(s);
+      return d.innerHTML;
+    }
+
+    function safeName(s) {
+      return String(s || "Bus").trim().replace(/[^a-zA-Z0-9_-]/g, "_");
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove("visible"), 3500);
+    }
+
+    function init() {
+      loadDraft();
+      applyStateToForm();
+      bindEvents();
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

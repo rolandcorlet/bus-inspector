@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bus Operator Safety Hazard Report</title>
+  <style>
+    /* ============================================
+       BRAND THEME: #187A35 with white
+       ============================================ */
+    :root {
+      --color-primary: #187A35;
+      --color-primary-dark: #135f2a;
+      --color-primary-light: #e8f5ec;
+      --color-primary-soft: rgba(24, 122, 53, 0.12);
+
+      --color-pass: #187A35;
+      --color-pass-bg: #e8f5ec;
+      --color-pass-border: #bfe3cb;
+
+      --color-fail: #ef4444;
+      --color-fail-bg: #fee2e2;
+      --color-fail-border: #fecaca;
+
+      --color-unselected: #5f6773;
+      --color-unselected-bg: #f3f4f6;
+
+      --color-bg: #ffffff;
+      --color-surface: #ffffff;
+      --color-text: #111827;
+      --color-text-secondary: #5f6773;
+      --color-text-tertiary: #9aa1ad;
+
+      --color-border: #e5e7eb;
+      --color-border-strong: #cfe8d8;
+
+      --color-warning: #b45309;
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.16);
+
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-full: 50%;
+
+      --header-height: 60px;
+      --progress-height: 3px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ============================================
+       DARK MODE VARIABLES
+       ============================================ */
+    [data-theme="dark"] {
+      --color-primary: #35b56a;
+      --color-primary-dark: #2fae65;
+      --color-primary-light: #123524;
+      --color-primary-soft: rgba(53, 181, 106, 0.18);
+
+      --color-pass: #2fae65;
+      --color-pass-bg: #123524;
+      --color-pass-border: #235c39;
+
+      --color-fail: #ef4444;
+      --color-fail-bg: #7f1d1d;
+      --color-fail-border: #7f1d1d;
+
+      --color-unselected: #9aa0a6;
+      --color-unselected-bg: rgba(154,160,166,0.12);
+
+      --color-bg: #0f1117;
+      --color-surface: #1e2130;
+      --color-text: #f1f3f9;
+      --color-text-secondary: #8b90a0;
+      --color-text-tertiary: #5a5f72;
+
+      --color-border: #2d3148;
+      --color-border-strong: #235c39;
+
+      --color-warning: #f59e0b;
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.30);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.40);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.55);
+    }
+
+    /* ============================================
+       RESET & BASE
+       ============================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-top: calc(var(--header-height) + var(--progress-height) + 30px);
+      transition: background var(--transition), color var(--transition);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ============================================
+       HEADER
+       ============================================ */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: var(--color-surface);
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      border-bottom: 1px solid var(--color-border);
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .header::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #187A35, #2e8b57, #3aa968);
+      z-index: 2;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 38px;
+      padding: 0 10px;
+      border-radius: 10px;
+      border: 1.5px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-primary);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      transition: all var(--transition);
+    }
+
+    .back-link:hover {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .header-title {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      text-align: center;
+      color: var(--color-text);
+      transition: color var(--transition);
+    }
+
+    .theme-toggle {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-full);
+      border: 2px solid var(--color-border);
+      background: var(--color-surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: all var(--transition);
+      color: var(--color-text);
+      flex-shrink: 0;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .theme-toggle:active {
+      transform: scale(0.9);
+    }
+
+    /* ============================================
+       PROGRESS
+       ============================================ */
+    .progress-container {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      right: 0;
+      height: var(--progress-height);
+      background: var(--color-border);
+      z-index: 999;
+      transition: background var(--transition);
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #187A35, #35b56a);
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+
+    .progress-label {
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--color-text-secondary);
+      padding: 7px 0;
+      position: fixed;
+      top: calc(var(--header-height) + var(--progress-height));
+      left: 0;
+      right: 0;
+      z-index: 998;
+      background: var(--color-bg);
+      transition: all var(--transition);
+    }
+
+    /* ============================================
+       CLEAR BUTTON — IN FLOW FOR CLEANER LAYOUT
+       ============================================ */
+    .clear-button-container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 12px 14px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .clear-button {
+      width: 100%;
+      max-width: 260px;
+      min-height: 46px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: inherit;
+      color: var(--color-fail);
+      background: var(--color-surface);
+      border: 2px solid var(--color-fail-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .clear-button:hover {
+      background: var(--color-fail-bg);
+    }
+
+    .clear-button:active {
+      transform: scale(0.98);
+    }
+
+    /* ============================================
+       CONTAINER & CARDS
+       ============================================ */
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 12px 14px 120px;
+    }
+
+    .card {
+      background: var(--color-surface);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 14px;
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      transition: all var(--transition);
+    }
+
+    .card:focus-within {
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-primary);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 16px 10px;
+    }
+
+    .card-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-full);
+      background: var(--color-primary-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.1rem;
+      transition: all var(--transition);
+    }
+
+    .card-label {
+      flex: 1;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--color-text);
+      line-height: 1.3;
+      transition: color var(--transition);
+    }
+
+    .card-body {
+      padding: 0 16px 16px;
+    }
+
+    /* ============================================
+       INPUTS
+       ============================================ */
+    .field-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 8px;
+      margin-top: 12px;
+      transition: color var(--transition);
+    }
+
+    .card-body .field-label:first-child {
+      margin-top: 0;
+    }
+
+    .text-input {
+      width: 100%;
+      min-height: 50px;
+      padding: 12px 14px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: 2px solid var(--color-border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      color: var(--color-text);
+      transition: all var(--transition);
+      -webkit-appearance: none;
+    }
+
+    .text-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 4px var(--color-primary-soft);
+    }
+
+    .text-input.error {
+      border-color: var(--color-fail);
+      box-shadow: 0 0 0 4px var(--color-fail-bg);
+    }
+
+    .text-input::placeholder {
+      color: var(--color-text-tertiary);
+      font-weight: 500;
+    }
+
+    .vehicle-id {
+      min-height: 56px;
+      font-size: 1.08rem;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: 0.02em;
+    }
+
+    .timestamp-line {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--color-text-tertiary);
+      margin-top: 10px;
+      transition: color var(--transition);
+    }
+
+    .required-dot {
+      display: inline-block;
+      background: var(--color-fail);
+      color: white;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    /* ============================================
+       PHOTO BUTTON & STRIP
+       ============================================ */
+    .photo-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .photo-label-text {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      flex-shrink: 0;
+    }
+
+    .photo-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 44px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: inherit;
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      background: var(--color-surface);
+      color: var(--color-primary);
+      transition: all var(--transition);
+    }
+
+    .photo-btn:hover {
+      background: var(--color-primary-light);
+    }
+
+    .photo-btn:active {
+      transform: scale(0.95);
+    }
+
+    .photo-btn input[type="file"] {
+      display: none;
+    }
+
+    .photo-count-badge {
+      font-size: 0.72rem;
+      background: var(--color-primary);
+      color: white;
+      width: 22px;
+      height: 22px;
+      border-radius: var(--radius-full);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+    }
+
+    .photo-count-badge.visible {
+      display: inline-flex;
+    }
+
+    .photo-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 8px 0;
+      margin-bottom: 8px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .photo-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .photo-thumb {
+      flex-shrink: 0;
+      width: 72px;
+      height: 72px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid var(--color-border);
+      position: relative;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .photo-thumb:hover {
+      border-color: var(--color-primary);
+      transform: scale(1.03);
+    }
+
+    .photo-thumb:active {
+      transform: scale(0.95);
+    }
+
+    .photo-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-thumb button {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: var(--radius-full);
+      border: none;
+      font-size: 0.65rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      line-height: 1;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    .remove-dot {
+      top: 3px;
+      right: 3px;
+      background: rgba(0,0,0,0.72);
+      color: white;
+    }
+
+    .download-dot {
+      bottom: 3px;
+      left: 3px;
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .comment-area {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px 14px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      border: 2px solid var(--color-border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      color: var(--color-text);
+      resize: vertical;
+      transition: all var(--transition);
+      -webkit-appearance: none;
+    }
+
+    .comment-area:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 4px var(--color-primary-soft);
+    }
+
+    .comment-area::placeholder {
+      color: var(--color-text-tertiary);
+    }
+
+    /* ============================================
+       SUBMIT & ACTIONS
+       ============================================ */
+    .submit-area {
+      margin-top: 24px;
+      text-align: center;
+    }
+
+    .submit-btn {
+      width: 100%;
+      min-height: 56px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      font-family: inherit;
+      color: white;
+      background: linear-gradient(135deg, #187A35, #135f2a);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 18px rgba(24, 122, 53, 0.32);
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 22px rgba(24, 122, 53, 0.42);
+    }
+
+    .submit-btn:active:not(:disabled) {
+      transform: translateY(0) scale(0.98);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .submit-btn.loading .spinner {
+      display: block;
+    }
+
+    .submit-btn.loading .btn-text {
+      display: none;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .actions {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .actions.visible {
+      display: flex;
+    }
+
+    .action-btn {
+      width: 100%;
+      min-height: 50px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-family: inherit;
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--color-surface);
+      color: var(--color-primary);
+    }
+
+    .action-btn:hover {
+      background: var(--color-primary-light);
+      border-color: var(--color-primary);
+    }
+
+    .action-btn:active {
+      transform: scale(0.98);
+    }
+
+    .action-btn.json,
+    .action-btn.csv,
+    .action-btn.photos {
+      background: var(--color-surface);
+      border-color: var(--color-border);
+      color: var(--color-primary);
+    }
+
+    /* ============================================
+       TOAST NOTIFICATION
+       ============================================ */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: #1e2130;
+      color: white;
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.88rem;
+      font-weight: 600;
+      z-index: 10000;
+      transition: transform 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 90%;
+      text-align: center;
+    }
+
+    .toast.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ============================================
+       LIGHTBOX
+       ============================================ */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,0.92);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .lightbox.visible {
+      display: flex;
+    }
+
+    .lightbox img {
+      max-width: 100%;
+      max-height: 75vh;
+      border-radius: var(--radius-md);
+      object-fit: contain;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-full);
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      font-size: 1.3rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .lightbox-close:hover {
+      background: rgba(255,255,255,0.25);
+    }
+
+    .lightbox-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .lightbox-action-btn {
+      min-height: 44px;
+      padding: 8px 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: inherit;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    .lightbox-action-btn.primary {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .lightbox-action-btn.secondary {
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+    @media (max-width: 420px) {
+      .container {
+        padding: 10px 10px 110px;
+      }
+
+      .card-header {
+        padding: 12px 12px 8px;
+      }
+
+      .card-body {
+        padding: 0 12px 12px;
+      }
+
+      .photo-btn {
+        min-height: 42px;
+        padding: 7px 14px;
+      }
+
+      .submit-btn {
+        min-height: 52px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .container {
+        padding: 8px 10px;
+      }
+
+      .card-header {
+        padding: 10px 10px 8px;
+      }
+
+      .card-body {
+        padding: 0 10px 10px;
+      }
+
+      .header-title {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header" role="banner">
+    <a href="index.html" class="back-link" aria-label="Back to Bus Reports Portal">← Portal</a>
+    <h1 class="header-title">
+      <span aria-hidden="true">🚌</span>
+      Bus Operator Safety Hazard Report
+    </h1>
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">🌙</button>
+  </header>
+
+  <div class="progress-container" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Report progress">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">0 of 7 items completed</div>
+
+  <!-- Clear Button Container -->
+  <div class="clear-button-container">
+    <button type="button" class="clear-button" id="clearBtn">🗑️ Clear Draft &amp; Start New</button>
+  </div>
+
+  <main class="container" id="main" role="main">
+    <section class="card" aria-label="Reporter & Trip Information">
+      <div class="card-header">
+        <div class="card-icon">📋</div>
+        <h2 class="card-label">Reporter &amp; Trip Information</h2>
+      </div>
+      <div class="card-body">
+        <label class="field-label" for="driverName">Driver Name <span class="required-dot">REQUIRED</span></label>
+        <input type="text" id="driverName" class="text-input" placeholder="Enter driver name" required aria-required="true" autocomplete="off" spellcheck="false">
+
+        <label class="field-label" for="reportDate">Date of Report <span class="required-dot">REQUIRED</span></label>
+        <input type="date" id="reportDate" class="text-input" required aria-required="true">
+
+        <label class="field-label" for="reportTime">Time of Identification <span class="required-dot">REQUIRED</span></label>
+        <input type="time" id="reportTime" class="text-input" required aria-required="true">
+
+        <label class="field-label" for="vehicleId">Vehicle ID / Registration <span class="required-dot">REQUIRED</span></label>
+        <input type="text" id="vehicleId" class="text-input vehicle-id" placeholder="e.g. VEH-001" required aria-required="true" autocomplete="off" spellcheck="false">
+
+        <label class="field-label" for="routeNumber">Route Number/Name</label>
+        <input type="text" id="routeNumber" class="text-input" placeholder="Enter route number or name">
+
+        <label class="field-label" for="location">Location of Hazard</label>
+        <input type="text" id="location" class="text-input" placeholder="Specific road, stop, or area">
+
+        <div class="timestamp-line" id="timestampLine"></div>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Incident/Hazard Details">
+      <div class="card-header">
+        <div class="card-icon">⚠️</div>
+        <h2 class="card-label">Incident/Hazard Details</h2>
+      </div>
+      <div class="card-body">
+        <label class="field-label" for="passengerCount">Number of passengers on bus at time of incident</label>
+        <input type="number" id="passengerCount" class="text-input" min="0" placeholder="Enter passenger count">
+
+        <label class="field-label" for="hazardDetails">Detailed Description of Hazard</label>
+        <textarea class="comment-area" id="hazardDetails" placeholder="Describe exactly what happened or what was observed..." rows="4"></textarea>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Immediate Actions Taken">
+      <div class="card-header">
+        <div class="card-icon">⚡</div>
+        <h2 class="card-label">Immediate Actions Taken</h2>
+      </div>
+      <div class="card-body">
+        <label class="field-label" for="actionsTaken">What actions did you take to minimize or eliminate the risk immediately?</label>
+        <textarea class="comment-area" id="actionsTaken" placeholder="Describe actions taken..." rows="4"></textarea>
+
+        <div class="photo-row">
+          <span class="photo-label-text">📷 Photos:</span>
+          <button type="button" class="photo-btn" id="photoBtn1">📸 Add Photo 1 <span class="photo-count-badge" id="photoCount1">0</span></button>
+          <input type="file" id="photoInput1" accept="image/*" capture="environment" hidden>
+        </div>
+        <div class="photo-strip" id="strip1"></div>
+        <div id="sizeWarn1" style="display:none;font-size:0.75rem;color:var(--color-warning);margin-bottom:8px;">⚠️ Photos exceed 5 MB.</div>
+
+        <div class="photo-row">
+          <span class="photo-label-text">📷 Photos:</span>
+          <button type="button" class="photo-btn" id="photoBtn2">📸 Add Photo 2 <span class="photo-count-badge" id="photoCount2">0</span></button>
+          <input type="file" id="photoInput2" accept="image/*" capture="environment" hidden>
+        </div>
+        <div class="photo-strip" id="strip2"></div>
+        <div id="sizeWarn2" style="display:none;font-size:0.75rem;color:var(--color-warning);margin-bottom:8px;">⚠️ Photos exceed 5 MB.</div>
+      </div>
+    </section>
+
+    <div class="submit-area" aria-label="Submit report">
+      <button type="button" id="emailBtn" class="submit-btn">
+        <span class="spinner"></span>
+        <span class="btn-text">📧 Generate &amp; Email Report</span>
+      </button>
+
+      <div class="actions" id="actionBox">
+        <button type="button" class="action-btn" id="dlHtmlBtn">📄 Download HTML Report</button>
+        <button type="button" class="action-btn json" id="dlJsonBtn">📦 Download JSON Data</button>
+        <button type="button" class="action-btn csv" id="dlCsvBtn">📊 Download CSV Data</button>
+        <button type="button" class="action-btn photos" id="dlPhotosBtn">📸 Download All Photos</button>
+      </div>
+    </div>
+  </main>
+
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo preview">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Close">✕</button>
+    <img id="lightboxImg" src="" alt="Photo">
+    <div class="lightbox-actions">
+      <button type="button" class="lightbox-action-btn primary" id="lightboxDownload">⬇️ Save</button>
+      <button type="button" class="lightbox-action-btn secondary" id="lightboxDismiss">Close</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="android-email.js"></script>
+  <script>
+    /* ============================================
+       CONFIGURATION
+       ============================================ */
+    const CONFIG = {
+      TARGET_EMAIL: "transportbusreports@gmail.com",
+      MAX_PHOTO_BYTES: 5 * 1024 * 1024,
+      STORAGE_KEY: "safety_hazard_report_draft",
+      AUTO_SAVE_MS: 3000,
+      ITEMS: [
+        { id: "driverName", label: "Driver Name" },
+        { id: "reportDate", label: "Report Date" },
+        { id: "reportTime", label: "Report Time" },
+        { id: "vehicleId", label: "Vehicle ID" },
+        { id: "hazardDetails", label: "Hazard Description" },
+        { id: "actionsTaken", label: "Actions Taken" }
+      ]
+    };
+
+    /* ============================================
+       STATE
+       ============================================ */
+    function createInitialState() {
+      const now = new Date();
+      return {
+        driverName: "",
+        reportDate: now.toISOString().slice(0, 10),
+        reportTime: now.toTimeString().substring(0, 5),
+        vehicleId: "",
+        routeNumber: "",
+        location: "",
+        passengerCount: "",
+        hazardDetails: "",
+        actionsTaken: "",
+        photos: [],
+        timestamp: now.toISOString()
+      };
+    }
+
+    let state = createInitialState();
+    let report = null;
+    let totalPhotoBytes = 0;
+    let saveTimer = null;
+    let lightboxSrc = null, lightboxName = null;
+    let toastTimer = null;
+
+    /* ============================================
+       DARK MODE
+       ============================================ */
+    (function initTheme() {
+      const saved = localStorage.getItem("safety_hazard_theme") || localStorage.getItem("theme");
+      if (saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeToggle").textContent = "☀️";
+      }
+    })();
+
+    document.getElementById("themeToggle").addEventListener("click", () => {
+      const html = document.documentElement;
+      const isDark = html.getAttribute("data-theme") === "dark";
+      const next = isDark ? "light" : "dark";
+      html.setAttribute("data-theme", next);
+      document.getElementById("themeToggle").textContent = isDark ? "🌙" : "☀️";
+      try {
+        localStorage.setItem("safety_hazard_theme", next);
+        localStorage.setItem("theme", next);
+      } catch (e) {}
+    });
+
+    function loadDraft() {
+      try {
+        const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        state = Object.assign(createInitialState(), parsed);
+        if (!Array.isArray(state.photos)) state.photos = [];
+        totalPhotoBytes = state.photos.reduce((sum, p) => sum + (p.size || 0), 0);
+      } catch (e) {
+        console.error("Failed to load hazard draft:", e);
+      }
+    }
+
+    function applyStateToForm() {
+      const now = new Date();
+      document.getElementById("driverName").value = state.driverName || "";
+      document.getElementById("reportDate").value = state.reportDate || now.toISOString().slice(0, 10);
+      document.getElementById("reportTime").value = state.reportTime || now.toTimeString().substring(0, 5);
+      document.getElementById("vehicleId").value = state.vehicleId || "";
+      document.getElementById("routeNumber").value = state.routeNumber || "";
+      document.getElementById("location").value = state.location || "";
+      document.getElementById("passengerCount").value = state.passengerCount || "";
+      document.getElementById("hazardDetails").value = state.hazardDetails || "";
+      document.getElementById("actionsTaken").value = state.actionsTaken || "";
+
+      state.reportDate = document.getElementById("reportDate").value;
+      state.reportTime = document.getElementById("reportTime").value;
+
+      document.getElementById("strip1").innerHTML = "";
+      document.getElementById("strip2").innerHTML = "";
+      (state.photos || []).forEach(ref => {
+        renderThumb(ref.photoNumber || 1, ref);
+      });
+      updatePhotoCount(1);
+      updatePhotoCount(2);
+      checkSizeWarn();
+    }
+
+    /* ============================================
+       EVENTS
+       ============================================ */
+    function bindEvents() {
+      const bindField = (id, key, trimVal = true) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const handler = () => {
+          el.classList.remove("error");
+          state[key] = trimVal ? el.value.trim() : el.value;
+          updateProgress();
+          scheduleSave();
+        };
+        el.addEventListener("input", handler);
+        el.addEventListener("change", handler);
+      };
+
+      bindField("driverName", "driverName");
+      bindField("reportDate", "reportDate", false);
+      bindField("reportTime", "reportTime", false);
+      bindField("vehicleId", "vehicleId");
+      bindField("routeNumber", "routeNumber");
+      bindField("location", "location");
+      bindField("passengerCount", "passengerCount", false);
+      bindField("hazardDetails", "hazardDetails");
+      bindField("actionsTaken", "actionsTaken");
+
+      const triggerHazardCamera = (photoNumber) => {
+        const inputEl = document.getElementById(`photoInput${photoNumber}`);
+        if (window.BusPhotoCapture && typeof window.BusPhotoCapture.takePhoto === "function") {
+          window.BusPhotoCapture.takePhoto({
+            inputElement: inputEl,
+            onCapture: (capturedItems) => {
+              if (!Array.isArray(capturedItems) || !capturedItems.length) return;
+              capturedItems.forEach((item) => {
+                if (!item || !item.data) return;
+                totalPhotoBytes += item.size || 0;
+                const ref = {
+                  name: item.name || `hazard_photo_${photoNumber}_${Date.now()}.jpg`,
+                  size: item.size || 0,
+                  type: item.type || "image/jpeg",
+                  data: item.data,
+                  photoNumber: photoNumber
+                };
+                state.photos.push(ref);
+                renderThumb(photoNumber, ref);
+              });
+              updatePhotoCount(photoNumber);
+              checkSizeWarn();
+              updateProgress();
+              scheduleSave();
+              showToast("📸 Photo added.");
+            }
+          });
+        } else if (inputEl) {
+          inputEl.click();
+        }
+      };
+
+      document.getElementById("photoBtn1").addEventListener("click", () => {
+        triggerHazardCamera(1);
+      });
+
+      document.getElementById("photoInput1").addEventListener("change", (e) => onPhotos(e, 1));
+
+      document.getElementById("photoBtn2").addEventListener("click", () => {
+        triggerHazardCamera(2);
+      });
+
+      document.getElementById("photoInput2").addEventListener("change", (e) => onPhotos(e, 2));
+
+      // Submit button
+      document.getElementById("emailBtn").addEventListener("click", onEmailFlow);
+
+      // Download buttons
+      document.getElementById("dlHtmlBtn").addEventListener("click", () => {
+        report = buildReport();
+        dlHtml(true);
+      });
+      document.getElementById("dlJsonBtn").addEventListener("click", dlJson);
+      document.getElementById("dlCsvBtn").addEventListener("click", dlCsv);
+      document.getElementById("dlPhotosBtn").addEventListener("click", dlPhotos);
+
+      // Clear button
+      document.getElementById("clearBtn").addEventListener("click", onClear);
+
+      // Lightbox events
+      document.getElementById("lightboxClose").addEventListener("click", closeLightbox);
+      document.getElementById("lightboxDismiss").addEventListener("click", closeLightbox);
+      document.getElementById("lightboxDownload").addEventListener("click", dlLightboxPhoto);
+      document.getElementById("lightbox").addEventListener("click", e => { if (e.target.id === "lightbox") closeLightbox(); });
+
+      setInterval(autoSave, CONFIG.AUTO_SAVE_MS);
+    }
+
+    /* ============================================
+       PHOTOS
+       ============================================ */
+    async function onPhotos(ev, photoNumber) {
+      const files = [...(ev.target.files || [])];
+      if (!files.length) return;
+
+      for (const f of files) {
+        if (f.type && !f.type.startsWith("image/")) continue;
+        try {
+          let b64;
+          let finalSize = f.size;
+          let finalType = f.type || "image/jpeg";
+          if (typeof window.compressBusPhoto === "function") {
+            const compressed = await window.compressBusPhoto(f);
+            b64 = compressed.dataUrl;
+            finalSize = compressed.size || f.size;
+            finalType = compressed.type || "image/jpeg";
+          } else {
+            b64 = await readB64(f);
+          }
+          totalPhotoBytes += finalSize;
+          const ref = { name: f.name || `photo_${Date.now()}.jpg`, size: finalSize, type: finalType, data: b64, photoNumber: photoNumber };
+          state.photos.push(ref);
+          renderThumb(photoNumber, ref);
+        } catch (err) { console.error(err); }
+      }
+      ev.target.value = "";
+      updatePhotoCount(photoNumber);
+      checkSizeWarn();
+      updateProgress();
+      scheduleSave();
+      showToast("📸 Photo added.");
+    }
+
+    function readB64(file) {
+      return new Promise((ok, fail) => {
+        const r = new FileReader();
+        r.onload = () => ok(r.result);
+        r.onerror = fail;
+        r.readAsDataURL(file);
+      });
+    }
+
+    function renderThumb(photoNumber, ref) {
+      const strip = document.getElementById(`strip${photoNumber}`);
+      if (!strip) return;
+      const div = document.createElement("div");
+      div.className = "photo-thumb";
+      div.innerHTML = `<img src="${ref.data}" alt="Photo"><button type="button" class="remove-dot" aria-label="Remove">✕</button><button type="button" class="download-dot" aria-label="Download">⬇</button>`;
+
+      div.querySelector(".remove-dot").addEventListener("click", e => {
+        e.stopPropagation();
+        const idx = state.photos.findIndex(p => p === ref);
+        if (idx > -1) {
+          totalPhotoBytes -= ref.size || 0;
+          state.photos.splice(idx, 1);
+        }
+        div.remove();
+        updatePhotoCount(photoNumber);
+        checkSizeWarn();
+        updateProgress();
+        scheduleSave();
+      });
+
+      div.querySelector(".download-dot").addEventListener("click", e => { e.stopPropagation(); downloadSingle(ref); });
+      div.addEventListener("click", () => openLightbox(ref));
+      strip.appendChild(div);
+    }
+
+    function updatePhotoCount(photoNumber) {
+      const count = state.photos.filter(p => p.photoNumber === photoNumber).length;
+      const badge = document.getElementById(`photoCount${photoNumber}`);
+      if (badge) {
+        badge.textContent = count;
+        badge.classList.toggle("visible", count > 0);
+      }
+    }
+
+    function checkSizeWarn() {
+      document.querySelectorAll(".photo-row").forEach((row, index) => {
+        const warn = document.getElementById(`sizeWarn${index + 1}`);
+        if (warn) warn.style.display = totalPhotoBytes > CONFIG.MAX_PHOTO_BYTES ? "block" : "none";
+      });
+    }
+
+    function downloadSingle(ref, customFilename) {
+      const filename = customFilename || ref.name || `photo_${Date.now()}.jpg`;
+      if (window.BusEmailSystem && typeof window.BusEmailSystem.saveDataUrlToDownloads === "function") {
+        window.BusEmailSystem.saveDataUrlToDownloads(ref.data, filename);
+        showToast(`✅ Saved ${filename} to Downloads!`);
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = ref.data;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    /* ============================================
+       LIGHTBOX
+       ============================================ */
+    function openLightbox(ref) {
+      lightboxSrc = ref.data;
+      lightboxName = ref.name || "photo.jpg";
+      document.getElementById("lightboxImg").src = ref.data;
+      document.getElementById("lightbox").classList.add("visible");
+    }
+
+    function closeLightbox() {
+      document.getElementById("lightbox").classList.remove("visible");
+      lightboxSrc = null;
+    }
+
+    function dlLightboxPhoto() {
+      if (!lightboxSrc) return;
+      const filename = lightboxName || `photo_${Date.now()}.jpg`;
+      if (window.BusEmailSystem && typeof window.BusEmailSystem.saveDataUrlToDownloads === "function") {
+        window.BusEmailSystem.saveDataUrlToDownloads(lightboxSrc, filename);
+        showToast(`✅ Saved ${filename} to Downloads!`);
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = lightboxSrc;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    /* ============================================
+       PROGRESS & TIMESTAMP
+       ============================================ */
+    function updateProgress() {
+      let done = 0;
+
+      if (state.driverName) done++;
+      if (state.reportDate) done++;
+      if (state.reportTime) done++;
+      if (state.vehicleId) done++;
+      if (state.hazardDetails) done++;
+      if (state.actionsTaken) done++;
+
+      const photosDone = state.photos.length > 0 ? 1 : 0;
+      done += photosDone;
+
+      const pct = Math.min((done / 7) * 100, 100);
+      document.getElementById("progressFill").style.width = pct + "%";
+      document.getElementById("progressLabel").textContent = `${done} of 7 items completed`;
+      document.querySelector(".progress-container").setAttribute("aria-valuenow", Math.round(pct));
+    }
+
+    function showTimestamp() {
+      const d = state.timestamp ? new Date(state.timestamp) : new Date();
+      state.timestamp = d.toISOString();
+      document.getElementById("timestampLine").textContent = `Started: ${d.toLocaleString("en-GB", { hour12: true })}`;
+    }
+
+    /* ============================================
+       AUTO-SAVE & DRAFT
+       ============================================ */
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(autoSave, 1200);
+    }
+
+    function autoSave() {
+      try {
+        const save = {
+          driverName: state.driverName,
+          reportDate: state.reportDate,
+          reportTime: state.reportTime,
+          vehicleId: state.vehicleId,
+          routeNumber: state.routeNumber,
+          location: state.location,
+          passengerCount: state.passengerCount,
+          hazardDetails: state.hazardDetails,
+          actionsTaken: state.actionsTaken,
+          photos: state.photos,
+          timestamp: state.timestamp,
+          savedAt: new Date().toISOString()
+        };
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(save));
+      } catch (e) {
+        console.error("Save failed", e);
+      }
+    }
+
+    function onClear() {
+      if (!confirm("Clear all report data? This cannot be undone.")) return;
+      try {
+        localStorage.removeItem(CONFIG.STORAGE_KEY);
+      } catch (e) {}
+      state = createInitialState();
+      totalPhotoBytes = 0;
+      report = null;
+
+      applyStateToForm();
+      document.getElementById("actionBox").classList.remove("visible");
+      updateProgress();
+      showTimestamp();
+      showToast("Draft cleared.");
+    }
+
+    /* ============================================
+       EMAIL FLOW
+       ============================================ */
+    async function onEmailFlow() {
+      const btn = document.getElementById("emailBtn");
+      const driverNameEl = document.getElementById("driverName");
+      const vehicleIdEl = document.getElementById("vehicleId");
+
+      state.driverName = driverNameEl.value.trim();
+      state.vehicleId = vehicleIdEl.value.trim();
+
+      if (!state.driverName) {
+        driverNameEl.classList.add("error");
+        driverNameEl.focus();
+        showToast("⚠️ Enter Driver Name first.");
+        return;
+      }
+
+      if (!state.vehicleId) {
+        vehicleIdEl.classList.add("error");
+        vehicleIdEl.focus();
+        showToast("⚠️ Enter Vehicle ID first.");
+        return;
+      }
+
+      btn.classList.add("loading");
+      btn.disabled = true;
+      await sleep(200);
+
+      try {
+        report = buildReport();
+
+        const filename = `hazard_report_${safeName(report.driverName)}_${dateFile()}.html`;
+        const htmlContent = dlHtml(false, filename);
+
+        const subj = `Hazard Report: ${state.driverName} - ${state.vehicleId}`;
+        const body = `Driver: ${state.driverName}\nVehicle: ${state.vehicleId}\nDate: ${report.generatedLocal}\n\n[Full report with photos attached]`;
+
+        document.getElementById("actionBox").classList.add("visible");
+
+        if (window.sendBusEmail) {
+          const sent = await sendBusEmail({
+            to: CONFIG.TARGET_EMAIL,
+            subject: subj,
+            body,
+            htmlContent,
+            filename
+          });
+
+          if (sent) {
+            showToast(`✅ Saved ${filename} to Downloads & opened email!`);
+            return;
+          }
+        }
+
+        dlHtml(true, filename);
+        const url = `mailto:${CONFIG.TARGET_EMAIL}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+        setTimeout(() => {
+          window.location.href = url;
+          showToast("✅ Report saved to Downloads! Attach it to your email.");
+        }, 300);
+
+      } catch (e) {
+        console.error(e);
+        showToast("❌ Report generation failed.");
+      } finally {
+        btn.classList.remove("loading");
+        btn.disabled = false;
+      }
+    }
+
+    function buildReport() {
+      const now = new Date();
+      return {
+        type: "Bus Operator Safety Hazard Report",
+        driverName: state.driverName,
+        reportDate: state.reportDate,
+        reportTime: state.reportTime,
+        vehicleId: state.vehicleId,
+        routeNumber: state.routeNumber,
+        location: state.location,
+        passengerCount: state.passengerCount,
+        hazardDetails: state.hazardDetails,
+        actionsTaken: state.actionsTaken,
+        generatedAt: now.toISOString(),
+        generatedLocal: now.toLocaleString("en-GB", { hour12: true }),
+        totalPhotos: state.photos.length,
+        photos: state.photos
+      };
+    }
+
+    /* ============================================
+       DOWNLOADS
+       ============================================ */
+    function dlHtml(download = true, filenameOverride = null) {
+      if (!report) report = buildReport();
+
+      let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report — ${esc(report.vehicleId)}</title><style>
+        *{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;color:#333;padding:16px;max-width:600px;margin:0 auto}
+        h1{font-size:1.2rem;text-align:center;margin-bottom:4px}h2{font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;color:#666;text-align:center;margin-bottom:16px}
+        .meta{text-align:center;font-size:0.8rem;color:#888;margin-bottom:16px}
+        .card{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.08);border-left:4px solid #187A35}
+        .card-title{font-weight:700;font-size:0.9rem;margin-bottom:4px}
+        .card-comment{font-size:0.8rem;color:#666;background:#f9f9f9;padding:6px 10px;border-radius:6px;margin-top:4px;white-space:pre-wrap}
+        .footer{text-align:center;font-size:0.7rem;color:#aaa;margin-top:20px}
+        @media print{body{background:#fff}.card{break-inside:avoid}}
+      </style></head><body>`;
+
+      html += `<h1>📋 Safety Hazard Report</h1><h2>${esc(report.driverName)} - ${esc(report.vehicleId)}</h2><div class="meta">Generated: ${esc(report.generatedLocal)}</div>`;
+
+      html += `<div class="card"><div class="card-title">📋 Reporter &amp; Trip Information</div>`;
+      html += `<div class="card-comment">Date of Report: ${esc(report.reportDate || "N/A")}<br>Time of Identification: ${esc(report.reportTime || "N/A")}<br>Route Number/Name: ${esc(report.routeNumber || "N/A")}<br>Location: ${esc(report.location || "N/A")}</div></div>`;
+
+      html += `<div class="card"><div class="card-title">⚠️ Incident/Hazard Details</div>`;
+      html += `<div class="card-comment">Passengers on Bus: ${esc(report.passengerCount || "N/A")}<br>Description: ${esc(report.hazardDetails || "N/A")}</div></div>`;
+
+      html += `<div class="card"><div class="card-title">⚡ Immediate Actions Taken</div>`;
+      html += `<div class="card-comment">${esc(report.actionsTaken || "N/A")}</div></div>`;
+
+      if (report.photos.length) {
+        html += `<div class="card"><div class="card-title">📷 Photos (${report.photos.length})</div>`;
+        html += `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">`;
+        report.photos.forEach(p => {
+          html += `<img src="${p.data}" style="width:120px;height:120px;object-fit:cover;border-radius:6px;border:1px solid #ddd;" alt="Photo">`;
+        });
+        html += `</div></div>`;
+      }
+
+      html += `<div class="footer">Report generated on ${new Date().toUTCString()}<br>Internal use only.</div></body></html>`;
+      const filename = filenameOverride || `hazard_report_${safeName(report.driverName)}_${dateFile()}.html`;
+      if (download) downloadBlob(html, "text/html", filename);
+      return html;
+    }
+
+    function dlJson() {
+      report = buildReport();
+      const clean = { ...report };
+      downloadBlob(JSON.stringify(clean, null, 2), "application/json", `hazard_report_${safeName(report.driverName)}_${dateFile()}.json`);
+    }
+
+    function dlCsv() {
+      report = buildReport();
+      let csv = "Field,Value\n";
+      csv += `Driver Name,"${(report.driverName||"").replace(/"/g,'""')}"\n`;
+      csv += `Report Date,"${(report.reportDate||"").replace(/"/g,'""')}"\n`;
+      csv += `Report Time,"${(report.reportTime||"").replace(/"/g,'""')}"\n`;
+      csv += `Vehicle ID,"${(report.vehicleId||"").replace(/"/g,'""')}"\n`;
+      csv += `Route Number,"${(report.routeNumber||"").replace(/"/g,'""')}"\n`;
+      csv += `Location,"${(report.location||"").replace(/"/g,'""')}"\n`;
+      csv += `Passenger Count,"${(report.passengerCount||"").replace(/"/g,'""')}"\n`;
+      csv += `Hazard Details,"${(report.hazardDetails||"").replace(/"/g,'""')}"\n`;
+      csv += `Actions Taken,"${(report.actionsTaken||"").replace(/"/g,'""')}"\n`;
+      csv += `Generated Date,"${(report.generatedLocal||"").replace(/"/g,'""')}"\n`;
+      csv += `Photos,"${(report.totalPhotos||0).toString().replace(/"/g,'""')}"\n`;
+
+      downloadBlob(csv, "text/csv", `hazard_report_${safeName(report.driverName)}_${dateFile()}.csv`);
+    }
+
+    function dlPhotos() {
+      report = buildReport();
+      const all = report.photos || [];
+      if (!all.length) { showToast("📸 No photos captured."); return; }
+      let i = 0;
+      function next() {
+        if (i >= all.length) { showToast(`📸 Saved ${all.length} photo(s) to Downloads.`); return; }
+        const p = all[i];
+        downloadSingle(p, `PHOTO_${safeName(report.driverName)}_${p.photoNumber || 1}_${i + 1}.jpg`);
+        i++; setTimeout(next, 300);
+      }
+      next();
+    }
+
+    /* ============================================
+       HELPERS
+       ============================================ */
+    function downloadBlob(content, type, filename) {
+      if (window.BusEmailSystem && typeof window.BusEmailSystem.saveFileToDownloads === "function") {
+        window.BusEmailSystem.saveFileToDownloads(content, filename, type || "text/plain", false);
+        showToast(`✅ Saved ${filename} to Downloads!`);
+        return;
+      }
+      const blob = new Blob([content], { type: type + ";charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+
+    function esc(s) {
+      const d = document.createElement("div");
+      d.textContent = s == null ? "" : String(s);
+      return d.innerHTML;
+    }
+
+    function safeName(s) {
+      return String(s || "").replace(/[^a-zA-Z0-9]/g, "_");
+    }
+
+    function dateFile() {
+      const d = new Date();
+      return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}_${String(d.getHours()).padStart(2,"0")}${String(d.getMinutes()).padStart(2,"0")}`;
+    }
+
+    function sleep(ms) {
+      return new Promise(r => setTimeout(r, ms));
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove("visible"), 3500);
+    }
+
+    function init() {
+      loadDraft();
+      applyStateToForm();
+      showTimestamp();
+      bindEvents();
+      updateProgress();
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

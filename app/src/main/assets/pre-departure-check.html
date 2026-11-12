@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vehicle Pre-Trip Inspection</title>
+
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-elevated: #ffffff;
+
+            --text-primary: #111827;
+            --text-secondary: #5f6773;
+            --text-tertiary: #9aa1ad;
+
+            --border-color: #e5e7eb;
+            --border-color-strong: #cfe8d8;
+            --border-focus: #187A35;
+
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.10), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --shadow-xl: 0 20px 40px -5px rgba(0,0,0,0.12);
+
+            --color-pass-bg: #187A35;
+            --color-pass-light: #e8f5ec;
+            --color-pass-border: #bfe3cb;
+            --color-pass-soft: rgba(24, 122, 53, 0.08);
+
+            --color-fail-bg: #ef4444;
+            --color-fail-light: #fee2e2;
+            --color-fail-border: #fecaca;
+            --color-fail-soft: rgba(239, 68, 68, 0.08);
+
+            --color-accent: #187A35;
+            --color-accent-hover: #135f2a;
+            --color-accent-light: #e8f5ec;
+            --color-accent-soft: rgba(24, 122, 53, 0.14);
+
+            --color-reset: #187A35;
+            --color-reset-hover: #135f2a;
+            --color-danger: #ef4444;
+
+            --spacing-xs: 8px;
+            --spacing-sm: 12px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d27;
+            --bg-card: #1e2130;
+            --bg-elevated: #252836;
+
+            --text-primary: #f1f3f9;
+            --text-secondary: #8b90a0;
+            --text-tertiary: #5a5f72;
+
+            --border-color: #2d3148;
+            --border-color-strong: #235c39;
+            --border-focus: #35b56a;
+
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.20);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.30);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.40);
+            --shadow-xl: 0 20px 40px rgba(0,0,0,0.50);
+
+            --color-pass-bg: #2fae65;
+            --color-pass-light: #123524;
+            --color-pass-border: #235c39;
+            --color-pass-soft: rgba(53, 181, 106, 0.16);
+
+            --color-fail-bg: #ef4444;
+            --color-fail-light: #7f1d1d;
+            --color-fail-border: #7f1d1d;
+            --color-fail-soft: rgba(239, 68, 68, 0.16);
+
+            --color-accent: #35b56a;
+            --color-accent-hover: #2fae65;
+            --color-accent-light: #123524;
+            --color-accent-soft: rgba(53, 181, 106, 0.18);
+
+            --color-reset: #35b56a;
+            --color-reset-hover: #2fae65;
+            --color-danger: #ef4444;
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            transition: background-color var(--transition-normal), color var(--transition-normal);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: var(--spacing-md);
+            background: var(--color-accent);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+            text-decoration: none;
+            font-weight: 600;
+            z-index: 10000;
+            transition: top var(--transition-fast);
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+
+        .header-container {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color var(--transition-normal), box-shadow var(--transition-fast);
+        }
+
+        .header-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--color-accent), #2e8b57, #3aa968);
+            z-index: 2;
+        }
+
+        .header-container.scrolled {
+            box-shadow: var(--shadow-md);
+        }
+
+        .header-content {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 14px 16px 16px;
+        }
+
+        .header-top-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            min-height: 38px;
+            padding: 0 10px;
+            border-radius: 10px;
+            border: 1.5px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--color-accent);
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            transition: all var(--transition-fast);
+        }
+
+        .back-link:hover {
+            border-color: var(--color-accent);
+            background: var(--color-accent-light);
+        }
+
+        .header-title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .header-icon {
+            font-size: 1.5rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bus-id-inline-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .bus-id-label {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: var(--color-accent);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            white-space: nowrap;
+        }
+
+        .bus-id-inline-input {
+            width: 190px;
+            padding: 11px 16px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            border: 2px solid var(--border-color-strong);
+            border-radius: 10px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all var(--transition-fast);
+            text-align: center;
+            letter-spacing: 0.02em;
+        }
+
+        .bus-id-inline-input:focus {
+            outline: none;
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 4px var(--color-accent-soft);
+        }
+
+        .bus-id-inline-input::placeholder {
+            color: var(--text-tertiary);
+            font-weight: 500;
+        }
+
+        .reset-btn-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 14px;
+            background-color: transparent;
+            color: var(--color-accent);
+            border: 2px solid var(--color-accent);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all var(--transition-fast);
+            flex-shrink: 0;
+        }
+
+        .reset-btn-header:hover {
+            background-color: var(--color-accent);
+            color: #fff;
+        }
+
+        .reset-btn-header:active {
+            transform: scale(0.97);
+        }
+
+        .reset-btn-header svg {
+            width: 15px;
+            height: 15px;
+            fill: currentColor;
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-toggle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--color-accent);
+            background-color: var(--color-accent-light);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.94);
+        }
+
+        .progress-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 2px;
+        }
+
+        .progress-bar-wrapper {
+            flex: 1;
+            height: 6px;
+            background-color: var(--border-color);
+            border-radius: 100px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 100px;
+            transition: width var(--transition-slow), background-color var(--transition-normal);
+        }
+
+        .progress-bar-fill.low {
+            background: linear-gradient(90deg, #f59e0b, #ef4444);
+        }
+
+        .progress-bar-fill.mid {
+            background: linear-gradient(90deg, #187A35, #35b56a);
+        }
+
+        .progress-bar-fill.full {
+            background: linear-gradient(90deg, #135f2a, #187A35);
+        }
+
+        .progress-text {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            min-width: 52px;
+            text-align: right;
+        }
+
+        .main-container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 20px 16px calc(24px + 92px);
+        }
+
+        .checklist-item {
+            background-color: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            margin-bottom: var(--spacing-md);
+            transition: all var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .checklist-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background-color: transparent;
+            transition: background-color var(--transition-normal);
+            border-radius: 0 2px 2px 0;
+        }
+
+        .checklist-item[data-status="pass"]::before {
+            background-color: var(--color-pass-bg);
+        }
+
+        .checklist-item[data-status="fail"]::before {
+            background-color: var(--color-fail-bg);
+        }
+
+        .checklist-item:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .checklist-item.completed-pass {
+            border-color: var(--color-pass-border);
+            background: linear-gradient(135deg, var(--bg-card), rgba(24, 122, 53, 0.05));
+        }
+
+        .checklist-item.completed-fail {
+            border-color: var(--color-fail-border);
+            background: linear-gradient(135deg, var(--bg-card), rgba(239, 68, 68, 0.04));
+        }
+
+        .item-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .item-number {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 800;
+            background-color: var(--bg-primary);
+            color: var(--text-secondary);
+            border: 2px solid var(--border-color);
+            flex-shrink: 0;
+            transition: all var(--transition-fast);
+        }
+
+        .checklist-item[data-status="pass"] .item-number {
+            background-color: var(--color-pass-bg);
+            color: white;
+            border-color: var(--color-pass-bg);
+        }
+
+        .checklist-item[data-status="fail"] .item-number {
+            background-color: var(--color-fail-bg);
+            color: white;
+            border-color: var(--color-fail-bg);
+        }
+
+        .item-title {
+            font-size: 1.08rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.45;
+        }
+
+        .toggle-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 0.98rem;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid transparent;
+        }
+
+        .toggle-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-color: white;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+
+        .toggle-btn:active::after {
+            opacity: 0.14;
+        }
+
+        .toggle-pass:not([aria-pressed="true"]) {
+            background-color: var(--color-pass-soft);
+            color: var(--text-secondary);
+            border-color: var(--color-pass-border);
+        }
+
+        .toggle-fail:not([aria-pressed="true"]) {
+            background-color: var(--color-fail-soft);
+            color: var(--text-secondary);
+            border-color: var(--color-fail-border);
+        }
+
+        .toggle-pass[aria-pressed="true"] {
+            background-color: var(--color-pass-bg);
+            color: white;
+            border-color: var(--color-pass-bg);
+            box-shadow: 0 3px 14px rgba(24, 122, 53, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+            transform: scale(1.02);
+        }
+
+        .toggle-fail[aria-pressed="true"] {
+            background-color: var(--color-fail-bg);
+            color: white;
+            border-color: var(--color-fail-bg);
+            box-shadow: 0 3px 14px rgba(239, 68, 68, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+            transform: scale(1.02);
+        }
+
+        .photo-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .photo-label {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: var(--color-accent);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .camera-button {
+            width: 100%;
+            padding: 13px 20px;
+            background: linear-gradient(135deg, #187A35, #135f2a);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all var(--transition-fast);
+            box-shadow: 0 3px 12px rgba(24, 122, 53, 0.28);
+        }
+
+        .camera-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 16px rgba(24, 122, 53, 0.38);
+        }
+
+        .camera-button:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .camera-button svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .photo-input-hidden {
+            display: none;
+        }
+
+        .thumbnail-strip {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 12px 0;
+            margin-top: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .thumbnail-strip::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .thumbnail-strip::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .thumbnail-strip::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: 100px;
+        }
+
+        .photo-thumbnail-container {
+            position: relative;
+            width: 92px;
+            height: 76px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            box-shadow: var(--shadow-sm);
+            border: 2px solid transparent;
+        }
+
+        .photo-thumbnail-container:hover {
+            transform: scale(1.04);
+            border-color: var(--color-accent);
+            box-shadow: var(--shadow-md);
+        }
+
+        .photo-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .remove-photo-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 24px;
+            height: 24px;
+            background-color: var(--color-fail-bg);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0;
+            z-index: 2;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.30);
+            transition: transform var(--transition-fast);
+        }
+
+        .remove-photo-btn:hover {
+            transform: scale(1.12);
+        }
+
+        .comment-section {
+            margin-top: 16px;
+            padding-top: 4px;
+        }
+
+        .comment-textarea {
+            width: 100%;
+            min-height: 76px;
+            padding: 12px 16px;
+            font-size: 0.92rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            resize: vertical;
+            transition: all var(--transition-fast);
+            font-family: inherit;
+            line-height: 1.5;
+        }
+
+        .comment-textarea:focus {
+            outline: none;
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 4px var(--color-accent-soft);
+        }
+
+        .comment-textarea::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .submit-container {
+            position: sticky;
+            bottom: 0;
+            background-color: var(--bg-secondary);
+            padding: 16px 24px calc(16px + env(safe-area-inset-bottom, 0px));
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.06);
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 15px 24px;
+            background: linear-gradient(135deg, #187A35, #135f2a);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 1.08rem;
+            font-weight: 800;
+            cursor: pointer;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all var(--transition-fast);
+            box-shadow: 0 6px 18px rgba(24, 122, 53, 0.32);
+            letter-spacing: 0.02em;
+        }
+
+        .submit-button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px rgba(24, 122, 53, 0.42);
+        }
+
+        .submit-button:active:not(:disabled) {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .submit-button:disabled {
+            background: var(--border-color);
+            box-shadow: none;
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+
+        .spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(255, 255, 255, 0.30);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .fallback-section {
+            display: none;
+            margin-top: 14px;
+        }
+
+        .fallback-section.visible {
+            display: block;
+            animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fallback-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .fallback-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .fallback-btn {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: var(--bg-card);
+            color: var(--color-accent);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 50px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all var(--transition-fast);
+        }
+
+        .fallback-btn:hover {
+            background-color: var(--color-accent-light);
+            border-color: var(--color-accent);
+        }
+
+        .fallback-btn:active {
+            transform: scale(0.98);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 84px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            width: calc(100% - var(--spacing-lg) * 2);
+            max-width: 480px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background-color: #1e2130;
+            color: white;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            opacity: 0;
+            transform: translateY(-12px) scale(0.96);
+            transition: all var(--transition-normal);
+            margin-bottom: var(--spacing-xs);
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .toast.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .toast.success {
+            background-color: var(--color-pass-bg);
+        }
+
+        .toast.error {
+            background-color: var(--color-fail-bg);
+        }
+
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.92);
+            z-index: 5000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-lg);
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+        }
+
+        .lightbox.visible {
+            display: flex;
+        }
+
+        .lightbox-image {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: var(--radius-md);
+            box-shadow: 0 8px 40px rgba(0,0,0,0.60);
+        }
+
+        .lightbox-close-hint {
+            position: absolute;
+            bottom: var(--spacing-lg);
+            color: white;
+            font-size: 0.8rem;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .photo-warning {
+            background-color: rgba(245, 158, 11, 0.10);
+            border-left: 4px solid #f59e0b;
+            padding: var(--spacing-sm) var(--spacing-md);
+            margin-top: var(--spacing-sm);
+            font-size: 0.84rem;
+            color: #b45309;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            display: none;
+        }
+
+        .photo-warning.visible {
+            display: block;
+        }
+
+        @keyframes fadeInCard {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .checklist-item {
+            animation: fadeInCard 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @media (max-width: 520px) {
+            .header-content {
+                padding: 12px;
+            }
+
+            .header-top-row {
+                flex-wrap: wrap;
+                row-gap: 10px;
+            }
+
+            .bus-id-inline-wrapper {
+                flex: 1 1 100%;
+                justify-content: space-between;
+                margin-bottom: 2px;
+            }
+
+            .bus-id-inline-input {
+                width: 100%;
+                max-width: 220px;
+            }
+
+            .reset-btn-header {
+                padding: 9px 12px;
+            }
+
+            .reset-btn-header span.reset-text {
+                display: none;
+            }
+
+            .header-title {
+                font-size: 1.1rem;
+            }
+
+            .checklist-item {
+                padding: 18px;
+            }
+
+            .toggle-btn {
+                padding: 12px 14px;
+                font-size: 0.95rem;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .bus-id-inline-input {
+                font-size: 1rem;
+                padding: 10px 14px;
+            }
+
+            .header-title {
+                font-size: 1.05rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                transition-duration: 0.01s !important;
+                animation-duration: 0.01s !important;
+            }
+
+            html {
+                scroll-behavior: auto;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: 100px;
+        }
+
+        ::selection {
+            background-color: rgba(24, 122, 53, 0.18);
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <header class="header-container" id="headerContainer">
+        <div class="header-content">
+            <div class="header-top-row">
+                <a href="index.html" class="back-link" aria-label="Back to Bus Reports Portal">← Portal</a>
+
+                <div class="header-title-group">
+                    <span class="header-icon">🚌</span>
+                    <h1 class="header-title">Pre-Trip Inspection</h1>
+                </div>
+
+                <div class="bus-id-inline-wrapper">
+                    <label class="bus-id-label" for="vehicleIdInput">BUS</label>
+                    <input 
+                        type="text" 
+                        id="vehicleIdInput"
+                        class="bus-id-inline-input"
+                        placeholder="e.g. 001"
+                        autocomplete="off"
+                        aria-required="true"
+                    >
+                </div>
+
+                <button type="button" class="reset-btn-header" id="resetButton" aria-label="Reset Form">
+                    <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L14 10h7V3l-3.35 3.35z"/></svg>
+                    <span class="reset-text">Reset</span>
+                </button>
+
+                <div class="header-actions">
+                    <button 
+                        class="theme-toggle" 
+                        id="themeToggle"
+                        aria-label="Toggle dark mode"
+                        title="Toggle Dark Mode"
+                    >
+                        🌙
+                    </button>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <div class="progress-bar-wrapper">
+                    <div class="progress-bar-fill low" id="progressBar"></div>
+                </div>
+                <span class="progress-text" id="progressText">0 / 8</span>
+            </div>
+        </div>
+    </header>
+
+    <main id="main-content" class="main-container">
+        <form id="inspectionForm">
+            <div id="checklistContainer"></div>
+            <div class="photo-warning" id="photoWarning"></div>
+        </form>
+    </main>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="lightbox" id="lightbox">
+        <img src="" alt="Photo preview" class="lightbox-image" id="lightboxImage">
+        <span class="lightbox-close-hint">Tap anywhere to close</span>
+    </div>
+
+    <footer class="submit-container">
+        <button type="button" class="submit-button" id="submitBtn" disabled>
+            <span class="btn-text">📋 Complete All Items First</span>
+            <div class="spinner" style="display: none;" id="submitSpinner"></div>
+        </button>
+
+        <section class="fallback-section" id="fallbackSection">
+            <h3 class="fallback-title">Additional Downloads</h3>
+            <div class="fallback-buttons">
+                <button type="button" class="fallback-btn" id="downloadHTMLBtn">📄 Download HTML Report</button>
+                <button type="button" class="fallback-btn" id="downloadJSONBtn">📄 Download JSON Data</button>
+                <button type="button" class="fallback-btn" id="downloadCSVBtn">📊 Download CSV Data</button>
+                <button type="button" class="fallback-btn" id="downloadPhotosBtn">📷 Download All Photos</button>
+            </div>
+        </section>
+    </footer>
+
+    <script src="android-email.js"></script>
+    <script>
+        const CONFIG = {
+            TARGET_EMAIL: 'transportbusreports@gmail.com',
+            STORAGE_KEY: 'pre_trip_inspection_draft',
+            MAX_PHOTO_SIZE_MB: 5,
+            CHECKLIST_ITEMS: [
+                { id: 1, label: "Lights - Indicators, Brakes & Headlights" },
+                { id: 2, label: "Tyres & Rims" },
+                { id: 3, label: "Vehicle Body Damage" },
+                { id: 4, label: "Vehicle Interior Clean" },
+                { id: 5, label: "Visibility - Wippers, Windows & Mirrors" },
+                { id: 6, label: "Dash Alarms and Tyre Pressure Gauge" },
+                { id: 7, label: "Seatbelts" },
+                { id: 8, label: "Two-way Radio" }
+            ]
+        };
+
+        const state = {
+            vehicleId: '',
+            checklist: Array(CONFIG.CHECKLIST_ITEMS.length).fill(null).map(() => ({
+                status: null, photos: [], comment: ''
+            })),
+            isProcessing: false
+        };
+
+        const els = {
+            header: document.getElementById('headerContainer'),
+            themeToggle: document.getElementById('themeToggle'),
+            progressBar: document.getElementById('progressBar'),
+            progressText: document.getElementById('progressText'),
+            vehicleIdInput: document.getElementById('vehicleIdInput'),
+            resetButton: document.getElementById('resetButton'),
+            checklistContainer: document.getElementById('checklistContainer'),
+            photoWarning: document.getElementById('photoWarning'),
+            submitBtn: document.getElementById('submitBtn'),
+            submitSpinner: document.getElementById('submitSpinner'),
+            btnText: document.querySelector('.btn-text'),
+            fallbackSection: document.getElementById('fallbackSection'),
+            downloadHTMLBtn: document.getElementById('downloadHTMLBtn'),
+            downloadJSONBtn: document.getElementById('downloadJSONBtn'),
+            downloadCSVBtn: document.getElementById('downloadCSVBtn'),
+            downloadPhotosBtn: document.getElementById('downloadPhotosBtn'),
+            toastContainer: document.getElementById('toastContainer'),
+            lightbox: document.getElementById('lightbox'),
+            lightboxImage: document.getElementById('lightboxImage')
+        };
+
+        function saveDraft() {
+            try {
+                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({
+                    vehicleId: state.vehicleId,
+                    checklist: state.checklist
+                }));
+            } catch (e) {
+                console.warn('Could not save pre-trip draft:', e);
+            }
+        }
+
+        function loadDraft() {
+            try {
+                const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (parsed.vehicleId) {
+                    state.vehicleId = parsed.vehicleId;
+                    els.vehicleIdInput.value = parsed.vehicleId;
+                }
+                if (Array.isArray(parsed.checklist) && parsed.checklist.length === CONFIG.CHECKLIST_ITEMS.length) {
+                    state.checklist = parsed.checklist.map(item => ({
+                        status: item.status || null,
+                        photos: Array.isArray(item.photos) ? item.photos : [],
+                        comment: item.comment || ''
+                    }));
+                }
+            } catch (e) {
+                console.warn('Could not load pre-trip draft:', e);
+            }
+        }
+
+        function initTheme() {
+            const saved = localStorage.getItem('theme') || localStorage.getItem('traffic_incident_theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            document.body.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeIcon(theme);
+
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                if (!localStorage.getItem('theme')) {
+                    const t = e.matches ? 'dark' : 'light';
+                    document.body.setAttribute('data-theme', t);
+                    document.documentElement.setAttribute('data-theme', t);
+                    updateThemeIcon(t);
+                }
+            });
+        }
+
+        function toggleTheme() {
+            const current = document.body.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', next);
+            document.documentElement.setAttribute('data-theme', next);
+            try {
+                localStorage.setItem('theme', next);
+                localStorage.setItem('traffic_incident_theme', next);
+                localStorage.setItem('safety_hazard_theme', next);
+            } catch (e) {}
+            updateThemeIcon(next);
+        }
+
+        function updateThemeIcon(theme) {
+            els.themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
+            els.themeToggle.setAttribute('aria-label', `Switch to ${theme === 'light' ? 'dark' : 'light'} mode`);
+        }
+
+        function renderChecklist() {
+            els.checklistContainer.innerHTML = CONFIG.CHECKLIST_ITEMS.map((item, i) => {
+                const st = state.checklist[i]?.status || '';
+                const cls = st === 'pass' ? 'completed-pass' : st === 'fail' ? 'completed-fail' : '';
+                return `
+                <article class="checklist-item ${cls}" id="checklistItem-${i}" data-status="${st}">
+                    <div class="item-header">
+                        <span class="item-number">${item.id}</span>
+                        <h3 class="item-title">${item.label}</h3>
+                    </div>
+
+                    <div class="toggle-container">
+                        <button type="button" class="toggle-btn toggle-pass" data-status="pass"
+                                aria-pressed="${st === 'pass'}"
+                                onclick="handleToggle(${i},'pass')">✓ Pass</button>
+                        <button type="button" class="toggle-btn toggle-fail" data-status="fail"
+                                aria-pressed="${st === 'fail'}"
+                                onclick="handleToggle(${i},'fail')">✗ Fail</button>
+                    </div>
+
+                    <section class="photo-section">
+                        <label class="photo-label">📷 Photo Evidence (Optional)</label>
+                        <input type="file" accept="image/*" capture="environment" class="photo-input-hidden"
+                               id="camera-${i}" onchange="handlePhotoSelect(event, ${i})">
+                        <button type="button" class="camera-button" onclick="triggerPhotoCapture(${i})">
+                            <svg viewBox="0 0 24 24"><path d="M12 9c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 5c-1.103 0-2-.897-2-2s.897-2 2-2 2 .897 2 2-.897 2-2 2z"/><path d="M21 8v10c0 1.103-.897 2-2 2H5c-1.103 0-2-.897-2-2V8c0-1.103.897-2 2-2h2.04L5 2v3h14V2l-2.04 6H21z"/></svg>
+                            Capture Photo
+                        </button>
+                        <div class="thumbnail-strip" id="thumbnails-${i}">
+                            ${state.checklist[i].photos.map((photo, pi) => `
+                                <div class="photo-thumbnail-container" onclick="openLightbox(${i}, ${pi})">
+                                    <img src="${photo}" alt="Inspection photo" class="photo-thumbnail" loading="lazy">
+                                    <button type="button" class="remove-photo-btn"
+                                            onclick="event.stopPropagation(); removePhoto(${i}, ${pi}); return false;" aria-label="Remove photo">×</button>
+                                </div>`).join('')}
+                        </div>
+                    </section>
+
+                    <section class="comment-section">
+                        <textarea class="comment-textarea" placeholder="Add notes or comments…" oninput="handleComment(${i}, this.value)">${escapeHTML(state.checklist[i].comment || '')}</textarea>
+                    </section>
+                </article>`;
+            }).join('');
+
+            updateProgress();
+        }
+
+        window.handleToggle = function(index, status) {
+            state.checklist[index].status = status;
+            const el = document.getElementById(`checklistItem-${index}`);
+            if (!el) return;
+
+            el.setAttribute('data-status', status);
+
+            el.classList.remove('completed-pass', 'completed-fail');
+            el.classList.add(status === 'pass' ? 'completed-pass' : 'completed-fail');
+
+            const passBtn = el.querySelector('.toggle-pass');
+            const failBtn = el.querySelector('.toggle-fail');
+            passBtn.setAttribute('aria-pressed', status === 'pass' ? 'true' : 'false');
+            failBtn.setAttribute('aria-pressed', status === 'fail' ? 'true' : 'false');
+
+            updateProgress();
+            saveDraft();
+        };
+
+        window.handleComment = function(index, value) {
+            state.checklist[index].comment = value;
+            saveDraft();
+        };
+
+        window.triggerPhotoCapture = function(index) {
+            const inputEl = document.getElementById(`camera-${index}`);
+            if (window.BusPhotoCapture && typeof window.BusPhotoCapture.takePhoto === 'function') {
+                window.BusPhotoCapture.takePhoto({
+                    inputElement: inputEl,
+                    onCapture: function(capturedItems) {
+                        if (!Array.isArray(capturedItems) || !capturedItems.length) return;
+                        capturedItems.forEach(item => {
+                            if (item && item.data) {
+                                state.checklist[index].photos.push(item.data);
+                            }
+                        });
+                        renderThumbnails(index);
+                        checkWarning();
+                        saveDraft();
+                        showToast('📸 Photo added.', 'success');
+                    }
+                });
+            } else if (inputEl) {
+                inputEl.click();
+            }
+        };
+
+        window.handlePhotoSelect = async function(event, index) {
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+
+            try {
+                for (const file of files) {
+                    if (file.type && !file.type.startsWith('image/')) {
+                        showToast('Please select an image.', 'error');
+                        continue;
+                    }
+                    let base64;
+                    if (typeof window.compressBusPhoto === 'function') {
+                        const compressed = await window.compressBusPhoto(file);
+                        base64 = compressed.dataUrl;
+                    } else {
+                        base64 = await fileToBase64(file);
+                    }
+                    if (base64) {
+                        state.checklist[index].photos.push(base64);
+                    }
+                }
+                renderThumbnails(index);
+                checkWarning();
+                saveDraft();
+                showToast('📸 Photo added.', 'success');
+            } catch (e) {
+                showToast('Failed to process photo.', 'error');
+            } finally {
+                event.target.value = '';
+            }
+        };
+
+        function renderThumbnails(index) {
+            const container = document.getElementById(`thumbnails-${index}`);
+            if (!container) return;
+            container.innerHTML = state.checklist[index].photos.map((photo, pi) => `
+                <div class="photo-thumbnail-container" onclick="openLightbox(${index}, ${pi})">
+                    <img src="${photo}" alt="Inspection photo" class="photo-thumbnail" loading="lazy">
+                    <button type="button" class="remove-photo-btn" onclick="event.stopPropagation(); removePhoto(${index}, ${pi}); return false;" aria-label="Remove photo">×</button>
+                </div>`).join('');
+        }
+
+        window.removePhoto = function(index, pi) {
+            state.checklist[index].photos.splice(pi, 1);
+            renderThumbnails(index);
+            checkWarning();
+            saveDraft();
+        };
+
+        window.openLightbox = function(ii, pi) {
+            const photo = state.checklist[ii].photos[pi];
+            if (photo) {
+                els.lightboxImage.src = photo;
+                els.lightbox.classList.add('visible');
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        els.lightbox.addEventListener('click', () => {
+            els.lightbox.classList.remove('visible');
+            document.body.style.overflow = '';
+        });
+
+        function fileToBase64(file) {
+            return new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = () => res(r.result);
+                r.onerror = rej;
+                r.readAsDataURL(file);
+            });
+        }
+
+        function getTotalPhotoSizeMB() {
+            let total = 0;
+            state.checklist.forEach(item => {
+                item.photos.forEach(p => { total += (p.length * 3) / 4; });
+            });
+            return total / 1024 / 1024;
+        }
+
+        function checkWarning() {
+            const size = getTotalPhotoSizeMB();
+            if (size > CONFIG.MAX_PHOTO_SIZE_MB) {
+                els.photoWarning.textContent = `⚠️ Total photo size: ${size.toFixed(2)}MB exceeds ${CONFIG.MAX_PHOTO_SIZE_MB}MB — large emails may be rejected.`;
+                els.photoWarning.classList.add('visible');
+            } else {
+                els.photoWarning.classList.remove('visible');
+            }
+        }
+
+        els.vehicleIdInput.addEventListener('input', e => {
+            state.vehicleId = e.target.value.trim();
+            validateForm();
+            saveDraft();
+        });
+
+        els.resetButton.addEventListener('click', () => {
+            if (confirm('Reset all fields? This cannot be undone.')) {
+                try {
+                    localStorage.removeItem(CONFIG.STORAGE_KEY);
+                } catch (e) {}
+                state.vehicleId = '';
+                state.checklist.forEach(item => { item.status = null; item.photos = []; item.comment = ''; });
+                els.vehicleIdInput.value = '';
+                renderChecklist();
+                els.fallbackSection.classList.remove('visible');
+                validateForm();
+            }
+        });
+
+        function updateProgress() {
+            const done = state.checklist.filter(i => i.status !== null).length;
+            const total = CONFIG.CHECKLIST_ITEMS.length;
+            const pct = (done / total) * 100;
+
+            els.progressBar.style.width = `${Math.max(pct, 4)}%`;
+            els.progressText.textContent = `${done} / ${total}`;
+
+            els.progressBar.classList.remove('low', 'mid', 'full');
+            if (pct < 30) els.progressBar.classList.add('low');
+            else if (pct < 100) els.progressBar.classList.add('mid');
+            else els.progressBar.classList.add('full');
+
+            validateForm();
+        }
+
+        function validateForm() {
+            const idOk = state.vehicleId.length >= 2;
+            const allDone = state.checklist.every(i => i.status !== null);
+            const ready = idOk && allDone;
+
+            els.submitBtn.disabled = !ready;
+            if (ready) {
+                els.btnText.textContent = '📧 Generate & Email Report';
+            } else if (!idOk) {
+                els.btnText.textContent = '🔑 Enter Vehicle ID';
+            } else {
+                const remaining = state.checklist.filter(i => !i.status).length;
+                els.btnText.textContent = `⏳ ${remaining} item${remaining > 1 ? 's' : ''} remaining`;
+            }
+
+            return ready;
+        }
+
+        els.submitBtn.addEventListener('click', async () => {
+            if (!validateForm()) {
+                showToast('Please complete all checklist items.', 'error');
+                const first = state.checklist.findIndex(i => !i.status);
+                if (first >= 0) {
+                    document.getElementById(`checklistItem-${first}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    els.vehicleIdInput.focus();
+                }
+                return;
+            }
+
+            if (state.isProcessing) return;
+
+            try {
+                state.isProcessing = true;
+                setSubmitting(true);
+
+                const now = new Date();
+                const reportData = {
+                    vehicleId: state.vehicleId,
+                    timestamp: now.toISOString(),
+                    inspectionDate: now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+                    inspectionTime: now.toLocaleTimeString('en-GB'),
+                    checklist: state.checklist.map((item, i) => ({
+                        id: CONFIG.CHECKLIST_ITEMS[i].id,
+                        label: CONFIG.CHECKLIST_ITEMS[i].label,
+                        status: item.status ? (item.status === 'pass' ? '✓ PASS' : '✗ FAIL') : '-',
+                        photos: item.photos,
+                        comment: item.comment || '-'
+                    }))
+                };
+
+                const htmlReport = generateHTMLReport(reportData);
+                const safeId = state.vehicleId.replace(/[^a-zA-Z0-9]/g, '_');
+                const filename = `PreTrip_${safeId}_${now.toISOString().slice(0,19).replace(/:/g,'-')}.html`;
+                const subject = `Pre-Trip Inspection — ${state.vehicleId}`;
+                const body = `Vehicle: ${state.vehicleId}\nDate: ${now.toLocaleDateString('en-GB')}\n\n[Full HTML report attached]`;
+
+                showFallback(reportData, htmlReport, filename);
+
+                if (window.sendBusEmail) {
+                    const sent = await sendBusEmail({
+                        to: CONFIG.TARGET_EMAIL,
+                        subject,
+                        body,
+                        htmlContent: htmlReport,
+                        filename
+                    });
+
+                    if (sent) {
+                        showToast(`✅ Saved ${filename} to Downloads & opened email!`, 'success', 6000);
+                        return;
+                    }
+                }
+
+                downloadFile(htmlReport, filename, 'text/html');
+                showToast('✅ Report saved to Downloads! Attach it to your email.', 'success', 6000);
+
+                setTimeout(() => {
+                    window.location.href = `mailto:${encodeURIComponent(CONFIG.TARGET_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                }, 500);
+
+            } catch (err) {
+                console.error(err);
+                showToast('Report generation failed.', 'error');
+            } finally {
+                state.isProcessing = false;
+                setSubmitting(false);
+            }
+        });
+
+        function setSubmitting(val) {
+            els.submitSpinner.style.display = val ? 'block' : 'none';
+            if (val) {
+                els.btnText.textContent = 'Generating…';
+                els.submitBtn.disabled = true;
+            } else {
+                validateForm();
+            }
+        }
+
+        function generateHTMLReport(data) {
+            const items = data.checklist.map(item => `
+        <div class="checklist-item" style="${item.status.includes('PASS') ? 'background:#f0fdf4;border-left-color:#16a34a' : 'background:#fef2f2;border-left-color:#dc2626'}">
+            <h3>${item.id}. ${escapeHTML(item.label)} 
+                <span style="${item.status.includes('PASS') ? 'color:#16a34a' : 'color:#dc2626'}">${item.status}</span>
+            </h3>
+            ${item.photos.length > 0 ? `<div class="photos-container">${item.photos.map(p => `<div class="photo-item"><img src="${p}" alt="Photo"></div>`).join('')}</div>` : ''}
+            ${item.comment && item.comment !== '-' ? `<div class="comment-box"><strong>Notes:</strong> ${escapeHTML(item.comment)}</div>` : ''}
+        </div>`).join('\n');
+
+            return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Pre-Trip Report — ${escapeHTML(data.vehicleId)}</title>
+<style>body{font-family:system-ui,sans-serif;margin:20px;background:#f3f4f6}.container{max-width:800px;margin:auto;background:#fff;padding:24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{color:#111827;border-bottom:3px solid #187A35;padding-bottom:12px}
+.header-info{background:#f9fafb;padding:16px;border-radius:8px;margin:20px 0}.header-info p{margin:6px 0;color:#374151}
+.checklist-item{margin:16px 0;padding:16px;border-left:4px solid #ccc;border-radius:0 8px 8px 0;background:#fafafa}
+.checklist-item h3{margin:0 0 8px;font-size:1rem;display:flex;justify-content:space-between;align-items:center}
+.photos-container{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}.photo-item img{max-width:180px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.comment-box{margin-top:8px;padding:10px;background:#f3f4f6;border-radius:4px;font-size:.9em;color:#6b7280}
+.footer{text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:.75rem}@media print{body{background:#fff}.container{box-shadow:none}}</style></head>
+<body><div class="container"><h1>🚌 Pre-Trip Inspection Report</h1>
+<div class="header-info"><p><strong>Vehicle:</strong> ${escapeHTML(data.vehicleId)}</p><p><strong>Date:</strong> ${escapeHTML(data.inspectionDate)}</p><p><strong>Time:</strong> ${escapeHTML(data.inspectionTime)}</p></div>
+<h2 style="margin:20px 0 12px;font-size:1.1rem">Checklist Results</h2>${items}
+<div class="footer">Generated: ${data.timestamp}</div></div></body></html>`;
+        }
+
+        function showFallback(reportData, htmlReport, htmlFilename) {
+            els.fallbackSection.classList.add('visible');
+            const safeId = state.vehicleId.replace(/[^a-zA-Z0-9]/g, '_');
+
+            const jsonStr = JSON.stringify(reportData, null, 2);
+            const csvData = generateCSV(reportData);
+
+            els.downloadHTMLBtn.textContent = `📄 Download HTML Report (${formatBytes(htmlReport.length)})`;
+            els.downloadHTMLBtn.onclick = () => {
+                downloadFile(htmlReport, htmlFilename, 'text/html');
+            };
+
+            els.downloadJSONBtn.textContent = `📄 Download JSON (${formatBytes(jsonStr.length)})`;
+            els.downloadJSONBtn.onclick = () => {
+                downloadFile(jsonStr, `PreTrip_${safeId}.json`, 'application/json');
+            };
+
+            els.downloadCSVBtn.textContent = `📊 Download CSV (${formatBytes(csvData.length)})`;
+            els.downloadCSVBtn.onclick = () => {
+                downloadFile(csvData, `PreTrip_${safeId}.csv`, 'text/csv');
+            };
+
+            els.downloadPhotosBtn.onclick = () => downloadAllPhotos(reportData.checklist);
+        }
+
+        function generateCSV(data) {
+            let csv = 'Vehicle ID,Date,Time,Item #,Description,Status,Notes\n';
+            data.checklist.forEach(item => {
+                csv += `"${data.vehicleId}","${data.inspectionDate}","${data.inspectionTime}",${item.id},"${item.label.replace(/"/g,'""')}",${item.status.includes('PASS')?'PASS':'FAIL'},"${(item.comment||'').replace(/"/g,'""')}"\n`;
+            });
+            return csv;
+        }
+
+        function downloadAllPhotos(items) {
+            const photos = []; let idx = 1;
+            const safeId = state.vehicleId.replace(/[^a-zA-Z0-9]/g, '_');
+            items.forEach((item, ii) => item.photos.forEach(p => {
+                photos.push({ data: p, filename: `PreTrip_${safeId}_item${item.id || ii + 1}_${idx++}.jpg` });
+            }));
+
+            if (!photos.length) { showToast('No photos to download.', 'error'); return; }
+
+            photos.forEach((p, i) => {
+                setTimeout(() => {
+                    if (window.BusEmailSystem && typeof window.BusEmailSystem.saveDataUrlToDownloads === 'function') {
+                        window.BusEmailSystem.saveDataUrlToDownloads(p.data, p.filename);
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = p.data;
+                        a.download = p.filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                }, i * 300);
+            });
+            showToast(`Saved ${photos.length} photo(s) to Downloads.`, 'success');
+        }
+
+        function downloadFile(content, filename, mime) {
+            if (window.BusEmailSystem && typeof window.BusEmailSystem.saveFileToDownloads === 'function') {
+                window.BusEmailSystem.saveFileToDownloads(content, filename, mime, false);
+                showToast(`✅ Saved ${filename} to Downloads!`, 'success');
+                return;
+            }
+            const blob = new Blob([content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+        }
+
+        function formatBytes(b) {
+            if (!b) return '0 B';
+            const k = 1024, s = ['B','KB','MB'];
+            const i = Math.floor(Math.log(b)/Math.log(k));
+            return (b/Math.pow(k,i)).toFixed(1)+' '+s[i];
+        }
+
+        function escapeHTML(s) {
+            if (!s) return '';
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function showToast(msg, type = 'success', duration = 3000) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = msg;
+            els.toastContainer.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('visible'));
+            setTimeout(() => {
+                toast.classList.remove('visible');
+                setTimeout(() => toast.remove(), 350);
+            }, duration);
+        }
+
+        let scrollTick = false;
+        window.addEventListener('scroll', () => {
+            if (!scrollTick) {
+                requestAnimationFrame(() => {
+                    els.header.classList.toggle('scrolled', window.scrollY > 4);
+                    scrollTick = false;
+                });
+                scrollTick = true;
+            }
+        }, { passive: true });
+
+        function init() {
+            initTheme();
+            loadDraft();
+            renderChecklist();
+            els.themeToggle.addEventListener('click', toggleTheme);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

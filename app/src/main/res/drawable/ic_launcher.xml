@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Green Brand Background -->
+    <path
+        android:fillColor="#187A35"
+        android:pathData="M0,0h108v108h-108z" />
+    <!-- Bus Body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M26,24 C26,19.58 29.58,16 34,16 L74,16 C78.42,16 82,19.58 82,24 L82,74 C82,77.31 79.31,80 76,80 L76,86 C76,88.21 74.21,90 72,90 L68,90 C65.79,90 64,88.21 64,86 L64,80 L44,80 L44,86 C44,88.21 42.21,90 40,90 L36,90 C33.79,90 32,88.21 32,86 L32,80 C28.69,80 26,77.31 26,74 Z" />
+    <!-- Destination Header -->
+    <path
+        android:fillColor="#135F2A"
+        android:pathData="M34,21 L74,21 L74,27 L34,27 Z" />
+    <!-- Windscreen -->
+    <path
+        android:fillColor="#187A35"
+        android:pathData="M32,31 L76,31 L76,55 L32,55 Z" />
+    <!-- Left & Right Headlights -->
+    <path
+        android:fillColor="#187A35"
+        android:pathData="M36,68 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="#187A35"
+        android:pathData="M72,68 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <!-- Front Grille -->
+    <path
+        android:fillColor="#135F2A"
+        android:pathData="M46,65 L62,65 L62,71 L46,71 Z" />
+</vector>
