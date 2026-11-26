@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+================================================================================
+  TIMESHEET PAGE — for the Bus Inspector APK (com.businspector.app)
+  v1.0 · 2026-11-24
+
+  HOW TO INSTALL (3 steps, no Kotlin changes):
+    1. Copy this file into  app/src/main/assets/  next to incident-report.html
+       (so the path is app/src/main/assets/timesheet.html).
+    2. In app/src/main/assets/index.html find the <nav class="card-list"> block
+       and add the Timesheet card (see index-card-snippet.html) just before
+       the closing </nav>.
+    3. Rebuild the APK in Android Studio and install it over the existing one.
+       Because you are signing with your existing BUSINSPE key, your saved
+       reports, outbox history and this timesheet history are all kept.
+
+  WHAT IT DOES
+    - Sign On / Meal / Sign Off buttons stamp the phone's clock and keep a
+      running total. The clock survives a page reload or the WebView being
+      killed mid-shift (the start time is stored as a real timestamp).
+    - Auto-calculates hours worked, deducts the meal/break, and handles a
+      shift that runs past midnight without you splitting it across two rows.
+    - Exports a block sheet laid out like the depot's printed sheet
+      (SHIFT header, SIGN ON / MEAL / SIGN OFF, HOURS WORKED, trip blocks)
+      using the same save-to-Downloads + email path as your other reports.
+    - Keeps a month ledger matching Book1.xlsx columns:
+      Date | Day | Start | End | Break (hrs) | Hours worked | Notes
+      and exports it as CSV.
+
+  IT USES ONLY BRIDGE CALLS THAT ALREADY EXIST
+    window.sendBusEmail({to,subject,body,filename,htmlContent})
+    window.BusEmailSystem.saveFileToDownloads(content,filename,mime,isBase64)
+  It also runs standalone in a plain browser (the buttons fall back to a
+  normal file download), which is handy for checking it on a PC first.
+
+  NOT INCLUDED (deliberately): no rounding to quarter hours — your hours are
+  reported exactly and rounded however your employer rounds them.
+================================================================================
+-->
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Timesheet</title>
+
+  <style>
+    :root {
+      --color-primary: #187A35;
+      --color-primary-dark: #135f2a;
+      --color-primary-light: #e8f5ec;
+      --color-primary-soft: rgba(24, 122, 53, 0.12);
+
+      --color-fail: #ef4444;
+      --color-fail-bg: #fee2e2;
+      --color-fail-border: #fecaca;
+
+      --color-warning: #b45309;
+
+      --color-bg: #ffffff;
+      --color-surface: #ffffff;
+      --color-text: #111827;
+      --color-text-secondary: #5f6773;
+      --color-text-tertiary: #9aa1ad;
+
+      --color-border: #e5e7eb;
+      --color-border-strong: #cfe8d8;
+
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 1, 0.04);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-full: 50%;
+
+      --header-height: 64px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="dark"] {
+      --color-primary: #35b56a;
+      --color-primary-dark: #2fae65;
+      --color-primary-light: #123524;
+      --color-primary-soft: rgba(53, 181, 106, 0.18);
+
+      --color-fail: #ef4444;
+      --color-fail-bg: #7f1d1d;
+      --color-fail-border: #7f1d1d;
+
+      --color-warning: #f59e0b;
+
+      --color-bg: #0f1117;
+      --color-surface: #1e2130;
+      --color-text: #f1f3f9;
+      --color-text-secondary: #8b90a0;
+      --color-text-tertiary: #5a5f72;
+
+      --color-border: #2d3148;
+      --color-border-strong: #235c39;
+
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.30);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.40);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-top: calc(var(--header-height) + 20px);
+      transition: background var(--transition), color var(--transition);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      height: var(--header-height);
+      background: var(--color-surface);
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .header::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #187A35, #2e8b57, #3aa968);
+    }
+    .back-link {
+      width: 44px; height: 44px; border-radius: var(--radius-full);
+      border: 1.5px solid var(--color-border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-text); text-decoration: none; font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .header-title { flex: 1; font-size: 1.12rem; font-weight: 800; text-align: center; }
+    .theme-toggle {
+      width: 44px; height: 44px; border-radius: var(--radius-full);
+      border: 2px solid var(--color-border); background: var(--color-surface);
+      color: var(--color-text); cursor: pointer; font-size: 1.2rem; flex-shrink: 0;
+    }
+
+    .container { max-width: 640px; margin: 0 auto; padding: 14px 12px 90px; }
+
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tab {
+      flex: 1; padding: 11px 8px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--color-border); background: var(--color-surface);
+      color: var(--color-text-secondary); font-weight: 800; font-size: 0.88rem;
+      cursor: pointer;
+    }
+    .tab.active { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-light); }
+
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .card h2 {
+      font-size: 0.8rem; font-weight: 800; letter-spacing: 0.6px;
+      text-transform: uppercase; color: var(--color-text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid.three { grid-template-columns: 1fr 1fr 1fr; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 0.74rem; font-weight: 700; color: var(--color-text-secondary); }
+    input, select, textarea {
+      font: inherit; font-size: 0.95rem;
+      padding: 11px 12px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--color-border);
+      background: var(--color-bg); color: var(--color-text);
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-primary); }
+    input[type="time"] { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+    .clock {
+      text-align: center; padding: 18px 14px;
+      border-radius: var(--radius-md);
+      background: var(--color-primary-light);
+      border: 1.5px solid var(--color-border-strong);
+      margin-bottom: 14px;
+    }
+    .clock-state { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--color-text-secondary); }
+    .clock-big { font-size: 2.5rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -1px; color: var(--color-primary); line-height: 1.1; }
+    .clock-sub { font-size: 0.8rem; color: var(--color-text-secondary); margin-top: 4px; }
+
+    .stamp-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+    .stamp {
+      padding: 13px 4px; border-radius: var(--radius-sm);
+      border: 2px solid var(--color-primary); background: var(--color-surface);
+      color: var(--color-primary); font-weight: 800; font-size: 0.78rem;
+      cursor: pointer; text-align: center;
+    }
+    .stamp small { display: block; font-size: 0.95rem; font-variant-numeric: tabular-nums; margin-top: 3px; color: var(--color-text); }
+    .stamp.on { background: var(--color-primary); color: #fff; }
+    .stamp.on small { color: #fff; }
+    .stamp[disabled] { opacity: 0.35; }
+
+    .trips { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .trips th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--color-text-secondary); padding: 6px 4px; border-bottom: 1.5px solid var(--color-border); }
+    .trips td { padding: 5px 4px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .trips input { padding: 8px 7px; font-size: 0.85rem; }
+    .trips .num { font-variant-numeric: tabular-nums; }
+    .trip-del { border: none; background: transparent; color: var(--color-fail); font-size: 1.1rem; cursor: pointer; padding: 4px 6px; }
+    .add-trip { margin-top: 10px; width: 100%; padding: 10px; border-radius: var(--radius-sm); border: 1.5px dashed var(--color-primary); background: transparent; color: var(--color-primary); font-weight: 800; cursor: pointer; }
+
+    .actions { display: grid; gap: 9px; }
+    .btn {
+      padding: 14px; border-radius: var(--radius-sm); border: none;
+      font-weight: 800; font-size: 0.92rem; cursor: pointer;
+      background: var(--color-primary); color: #fff;
+    }
+    .btn.secondary { background: var(--color-surface); color: var(--color-primary); border: 1.5px solid var(--color-primary); }
+    .btn.ghost { background: transparent; color: var(--color-text-secondary); border: 1.5px solid var(--color-border); }
+    .btn.danger { background: transparent; color: var(--color-fail); border: 1.5px solid var(--color-fail-border); }
+
+    table.ledger { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .ledger th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--color-text-secondary); text-align: left; padding: 6px 4px; border-bottom: 1.5px solid var(--color-border); }
+    .ledger td { padding: 8px 4px; border-bottom: 1px solid var(--color-border); font-variant-numeric: tabular-nums; }
+    .ledger tr.editing { background: var(--color-primary-soft); }
+    .ledger .tot { font-weight: 800; color: var(--color-primary); }
+    .month-pick { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .month-pick input { flex: 1; }
+
+    .hint { font-size: 0.76rem; color: var(--color-text-tertiary); margin-top: 10px; line-height: 1.45; }
+
+    .toast {
+      position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(30px);
+      background: var(--color-text); color: var(--color-bg);
+      padding: 12px 18px; border-radius: 999px; font-size: 0.84rem; font-weight: 700;
+      opacity: 0; pointer-events: none; transition: all var(--transition); z-index: 3000;
+      max-width: 92vw;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 430px) {
+      .grid, .grid.three { grid-template-columns: 1fr 1fr; }
+      .clock-big { font-size: 2.1rem; }
+    }
+  </style>
+</head>
+
+<body data-theme="light">
+  <header class="header">
+    <a class="back-link" href="index.html" aria-label="Back to reports">&#8592;</a>
+    <h1 class="header-title"><span aria-hidden="true">&#9203;</span> Timesheet</h1>
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">&#127769;</button>
+  </header>
+
+  <main class="container">
+    <div class="tabs">
+      <button type="button" class="tab active" id="tabDay">This shift</button>
+      <button type="button" class="tab" id="tabLedger">Month ledger</button>
+    </div>
+
+    <!-- ============================ DAY VIEW ============================ -->
+    <section id="viewDay">
+      <div class="clock">
+        <div class="clock-state" id="clockState">Not signed on</div>
+        <div class="clock-big" id="clockBig">0.00 h</div>
+        <div class="clock-sub" id="clockSub">Tap SIGN ON when you clock up at the depot</div>
+      </div>
+
+      <div class="stamp-row">
+        <button type="button" class="stamp" id="btnOn">SIGN ON<small id="lblOn">&mdash;</small></button>
+        <button type="button" class="stamp" id="btnMealOff">MEAL OFF<small id="lblMealOff">&mdash;</small></button>
+        <button type="button" class="stamp" id="btnMealOn">MEAL ON<small id="lblMealOn">&mdash;</small></button>
+        <button type="button" class="stamp" id="btnOff">SIGN OFF<small id="lblOff">&mdash;</small></button>
+      </div>
+
+      <div class="card">
+        <h2>Shift details</h2>
+        <div class="grid">
+          <div class="field"><label for="fDate">Date</label><input type="date" id="fDate" /></div>
+          <div class="field"><label for="fShift">Shift / Block no.</label><input type="text" id="fShift" placeholder="8037" /></div>
+          <div class="field"><label for="fBus">Bus ID</label><input type="text" id="fBus" placeholder="5087" /></div>
+          <div class="field"><label for="fDepot">Depot</label><input type="text" id="fDepot" value="Smeaton Grange Depot (Anzac Ave)" /></div>
+          <div class="field"><label for="fMealPlace">Meal taken at</label><input type="text" id="fMealPlace" placeholder="Campbelltown Stn" /></div>
+          <div class="field"><label for="fSpans">Runs past midnight?</label>
+            <select id="fSpans">
+              <option value="auto">Auto</option>
+              <option value="yes">Yes &mdash; ends next day</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label for="fNotes">Notes</label>
+          <textarea id="fNotes" rows="2" placeholder="Starts 12:30pm, ends midnight"></textarea>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label for="fManual">Hours worked &mdash; manual override (leave blank to calculate)</label>
+          <input type="text" id="fManual" inputmode="decimal" placeholder="e.g. 9.46" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Trip blocks</h2>
+        <table class="trips">
+          <thead>
+            <tr><th>Route</th><th>Ext</th><th>Display</th><th>Start</th><th>End</th><th></th></tr>
+          </thead>
+          <tbody id="tripBody"></tbody>
+        </table>
+        <button type="button" class="add-trip" id="addTrip">+ Add trip</button>
+        <p class="hint">Route / Ext / Display match the way the depot sheet prints them
+          (<code>Route: 605B &ndash; Ext. number: 10 &ndash; DisplayC: 6058</code>). Leave the trip
+          table empty if you only want the hours sheet.</p>
+      </div>
+
+      <div class="card">
+        <h2>Export</h2>
+        <div class="actions">
+          <button type="button" class="btn" id="btnEmail">&#128231; Email block sheet</button>
+          <button type="button" class="btn secondary" id="btnSave">&#128190; Save block sheet to Downloads</button>
+          <button type="button" class="btn ghost" id="btnSaveLedger">Save to ledger only</button>
+          <button type="button" class="btn danger" id="btnClear">Clear this shift</button>
+        </div>
+        <p class="hint" id="emailHint">Emailed to transportbusreports@gmail.com and saved to /Download, the same
+          as your incident and pre-trip reports.</p>
+      </div>
+    </section>
+
+    <!-- ========================== LEDGER VIEW ========================== -->
+    <section id="viewLedger" style="display:none">
+      <div class="month-pick">
+        <input type="month" id="fMonth" />
+        <button type="button" class="btn secondary" id="btnCsv" style="white-space:nowrap">&#8681; CSV</button>
+      </div>
+      <div class="card">
+        <h2 id="ledgerTitle">Sessions</h2>
+        <table class="ledger">
+          <thead><tr><th>Date</th><th>Day</th><th>Start</th><th>End</th><th>Break</th><th>Hrs</th><th></th></tr></thead>
+          <tbody id="ledgerBody"></tbody>
+        </table>
+        <p class="hint">Tap a row to reopen and edit it. Hours are calculated exactly &mdash; no rounding to
+          quarter hours is applied, so the total matches the raw clock. CSV columns match Book1.xlsx.</p>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="android-email.js"></script>
+  <script>
+  // ======================================================================
+  // CORE MATH — pure functions, no DOM. Everything time-related in this
+  // page goes through here so it can be unit-tested in isolation.
+  // CORE_START
+  function toMin(str) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(String(str || '').trim());
+    if (!m) return null;
+    var h = parseInt(m[1], 10) % 24, mm = parseInt(m[2], 10);
+    if (mm > 59) return null;
+    return h * 60 + mm;
+  }
+
+  function fmtHM(mins) {
+    if (mins === null || mins === undefined) return '';
+    var v = ((mins % 1440) + 1440) % 1440;
+    var h = Math.floor(v / 60), m = v % 60;
+    return (h < 10 ? '0' : '') + h + (m < 10 ? '0' : '') + m;
+  }
+
+  // Forward distance between two clock times in minutes, always moving
+  // forward in time; a smaller end means it rolled past midnight.
+  function spanMin(start, end, spansNextDay) {
+    var a = toMin(start), b = toMin(end);
+    if (a === null || b === null) return null;
+    if (spansNextDay === true) {
+      if (b <= a) b += 1440;
+      return b - a;
+    }
+    if (spansNextDay === false) {
+      return b - a; // may be negative: caller decides
+    }
+    var d = b - a;
+    if (d < 0) d += 1440;
+    return d;
+  }
+
+  function crossesMidnight(start, end) {
+    var a = toMin(start), b = toMin(end);
+    if (a === null || b === null) return false;
+    return b < a;
+  }
+
+  // Hours worked = sign-on to sign-off, minus the meal/break span.
+  // Returns { hours, totalMin, breakMin } or null when times are incomplete.
+  function computeHours(s) {
+    var spans = s.spans === 'yes' ? true : (s.spans === 'no' ? false : undefined);
+    var total = spanMin(s.signOn, s.signOff, spans);
+    if (total === null || total < 0) return null;
+    var brk = spanMin(s.mealOff, s.mealOn, true);
+    if (brk === null) brk = 0;
+    if (brk > total) brk = total;
+    return {
+      hours: Math.round(((total - brk) / 60) * 100) / 100,
+      totalMin: total,
+      breakMin: brk
+    };
+  }
+
+  // "9h 46m" from a minute count. The depot prints hours as H.MM where the
+  // .MM part is MINUTES (their 9.46 for shift 8037 is 9h46m = 9.77 decimal
+  // hours), so this page always shows both to avoid the two being confused.
+  function fmtDuration(mins) {
+    if (mins === null || mins === undefined) return '';
+    var m = Math.max(0, Math.round(mins));
+    var h = Math.floor(m / 60);
+    return h + 'h ' + String(m % 60).padStart(2, '0') + 'm';
+  }
+
+  function decimalHours(v) {
+    var n = parseFloat(String(v).replace(',', '.'));
+    if (!isFinite(n)) return null;
+    return Math.round(n * 100) / 100;
+  }
+
+  function dayName(iso) {
+    if (!iso) return '';
+    var d = new Date(iso + 'T12:00:00');
+    if (isNaN(d)) return '';
+    return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
+  }
+
+  function shiftDayLabel(s) {
+    var h = toMin(s.signOn);
+    return h !== null && h < 120 ? ' (night)' : '';
+  }
+  // CORE_END
+  // ======================================================================
+
+  var CFG = {
+    LEDGER_KEY: 'bus_timesheet_sessions',
+    DRAFT_KEY: 'bus_timesheet_draft',
+    THEME_KEYS: ['theme', 'traffic_incident_theme', 'safety_hazard_theme'],
+    TARGET: (window.BusEmailSystem && window.BusEmailSystem.targetEmail) || 'transportbusreports@gmail.com'
+  };
+
+  var state = emptyState();
+  var ticker = null;
+
+  function emptyState() {
+    return {
+      id: null,
+      date: todayISO(),
+      shift: '',
+      bus: '',
+      depot: 'Smeaton Grange Depot (Anzac Ave)',
+      mealPlace: '',
+      spans: 'auto',
+      notes: '',
+      manual: '',
+      signOn: '', signOff: '', mealOff: '', mealOn: '',
+      signOnEpoch: null,
+      trips: []
+    };
+  }
+
+  function todayISO() {
+    var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
+  function nowHM() {
+    var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function esc(s) {
+    return String(s === undefined || s === null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function showToast(msg, kind, ms) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = kind === 'error' ? 'var(--color-fail)' : 'var(--color-text)';
+    t.style.color = kind === 'error' ? '#fff' : 'var(--color-bg)';
+    t.classList.add('show');
+    clearTimeout(showTimer);
+    showTimer = setTimeout(function () { t.classList.remove('show'); }, ms || 3200);
+  }
+  var showTimer = null;
+
+  // ---------------------------------------------------------------- theme
+  function getTheme() {
+    for (var i = 0; i < CFG.THEME_KEYS.length; i++) {
+      try {
+        var v = localStorage.getItem(CFG.THEME_KEYS[i]);
+        if (v === 'dark' || v === 'light') return v;
+      } catch (e) {}
+    }
+    return null;
+  }
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    document.body.setAttribute('data-theme', t);
+    var b = document.getElementById('themeToggle');
+    b.textContent = t === 'dark' ? '☀️' : '🌙';
+  }
+  var savedTheme = getTheme();
+  var sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(savedTheme || (sysDark ? 'dark' : 'light'));
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var next = (document.body.getAttribute('data-theme') === 'dark') ? 'light' : 'dark';
+    applyTheme(next);
+    CFG.THEME_KEYS.forEach(function (k) { try { localStorage.setItem(k, next); } catch (e) {} });
+  });
+
+  // ------------------------------------------------------------ rendering
+  function bindDayFields() {
+    document.getElementById('fDate').value = state.date;
+    document.getElementById('fShift').value = state.shift;
+    document.getElementById('fBus').value = state.bus;
+    document.getElementById('fDepot').value = state.depot;
+    document.getElementById('fMealPlace').value = state.mealPlace;
+    document.getElementById('fSpans').value = state.spans;
+    document.getElementById('fNotes').value = state.notes;
+    document.getElementById('fManual').value = state.manual;
+    ['fDate','fShift','fBus','fDepot','fMealPlace','fSpans','fNotes','fManual'].forEach(function (id) {
+      var el = document.getElementById(id);
+      el.onchange = el.oninput = function () {
+        state.date = document.getElementById('fDate').value || todayISO();
+        state.shift = document.getElementById('fShift').value;
+        state.bus = document.getElementById('fBus').value;
+        state.depot = document.getElementById('fDepot').value;
+        state.mealPlace = document.getElementById('fMealPlace').value;
+        state.spans = document.getElementById('fSpans').value;
+        state.notes = document.getElementById('fNotes').value;
+        state.manual = document.getElementById('fManual').value;
+        saveDraft(); renderClock(); renderStamps();
+      };
+    });
+  }
+
+  function renderStamps() {
+    document.getElementById('lblOn').textContent = state.signOn || '—';
+    document.getElementById('lblMealOff').textContent = state.mealOff || '—';
+    document.getElementById('lblMealOn').textContent = state.mealOn || '—';
+    document.getElementById('lblOff').textContent = state.signOff || '—';
+    document.getElementById('btnOn').classList.toggle('on', !!state.signOn);
+    document.getElementById('btnMealOff').classList.toggle('on', !!state.mealOff);
+    document.getElementById('btnMealOn').classList.toggle('on', !!state.mealOn);
+    document.getElementById('btnOff').classList.toggle('on', !!state.signOff);
+  }
+
+  function renderClock() {
+    var big = document.getElementById('clockBig');
+    var st = document.getElementById('clockState');
+    var sub = document.getElementById('clockSub');
+    var c = computeHours(state);
+
+    if (!state.signOn) {
+      st.textContent = 'Not signed on';
+      big.textContent = '0.00 h';
+      sub.textContent = 'Tap SIGN ON when you clock up at the depot';
+      return;
+    }
+    if (!state.signOff) {
+      var runMin = Math.floor((Date.now() - state.signOnEpoch) / 60000);
+      var mealSoFar = spanMin(state.mealOff, state.mealOn, true) || 0;
+      if (state.mealOff && !state.mealOn) {
+        mealSoFar = Math.max(0, Math.floor((Date.now() - toEpoch(state.date, state.mealOff)) / 60000) - runMin + mealSoFar);
+        mealSoFar = 0; // meal still open: not deducted yet
+      }
+      st.textContent = 'On shift' + (mealSoFar ? ' · meal off' : '');
+      big.textContent = (Math.max(0, runMin - mealSoFar) / 60).toFixed(2) + ' h';
+      sub.textContent = 'Signed on ' + fmtHM(toMin(state.signOn)) +
+        ' · running live, tap SIGN OFF at the end';
+      return;
+    }
+    if (!c) { st.textContent = 'Check times'; big.textContent = '0.00 h'; sub.textContent = 'Sign on/off times are incomplete'; return; }
+    var ov = decimalHours(state.manual);
+    st.textContent = 'Signed off';
+    big.textContent = (ov !== null ? ov : c.hours).toFixed(2) + ' h';
+    sub.textContent = fmtHM(toMin(state.signOn)) + ' → ' + fmtHM(toMin(state.signOff)) +
+      ' · ' + fmtDuration(c.totalMin - c.breakMin) + ' worked · ' + (c.breakMin / 60).toFixed(2) + ' h break' +
+      (crossesMidnight(state.signOn, state.signOff) ? ' · crosses midnight' : '') +
+      (ov !== null ? ' · manual override' : '');
+  }
+
+  function toEpoch(dateISO, hm) {
+    var m = toMin(hm);
+    if (!dateISO || m === null) return null;
+    var d = new Date(dateISO + 'T00:00:00');
+    if (isNaN(d)) return null;
+    d.setHours(Math.floor(m / 60), m % 60, 0, 0);
+    return d.getTime();
+  }
+
+  function renderTrips() {
+    var tb = document.getElementById('tripBody');
+    tb.innerHTML = '';
+    state.trips.forEach(function (t, i) {
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td><input type="text" inputmode="text" value="' + esc(t.route) + '" placeholder="605B" data-i="' + i + '" data-k="route" /></td>' +
+        '<td><input type="text" value="' + esc(t.ext) + '" placeholder="10" data-i="' + i + '" data-k="ext" /></td>' +
+        '<td><input type="text" value="' + esc(t.display) + '" placeholder="6058" data-i="' + i + '" data-k="display" /></td>' +
+        '<td><input type="time" value="' + esc(t.start) + '" data-i="' + i + '" data-k="start" /></td>' +
+        '<td><input type="time" value="' + esc(t.end) + '" data-i="' + i + '" data-k="end" /></td>' +
+        '<td><button type="button" class="trip-del" data-del="' + i + '" aria-label="Remove trip">×</button></td>';
+      tb.appendChild(tr);
+    });
+  }
+
+  document.getElementById('tripBody').addEventListener('input', function (e) {
+    var i = e.target.getAttribute('data-i'), k = e.target.getAttribute('data-k');
+    if (i === null || !k) return;
+    state.trips[+i][k] = e.target.value;
+    saveDraft();
+  });
+  document.getElementById('tripBody').addEventListener('click', function (e) {
+    var i = e.target.getAttribute('data-del');
+    if (i === null) return;
+    state.trips.splice(+i, 1);
+    renderTrips(); saveDraft();
+  });
+  document.getElementById('addTrip').addEventListener('click', function () {
+    state.trips.push({ route: '', ext: '', display: '', block: state.shift, start: '', end: '', note: '' });
+    renderTrips(); saveDraft();
+  });
+
+  // --------------------------------------------------------------- clock
+  function stamp(kind) {
+    if (kind === 'on') {
+      if (state.signOn) {
+        showToast('Already signed on at ' + fmtHM(toMin(state.signOn)) + '. Use SIGN OFF, or Clear to start over.', 'error', 4500);
+        return;
+      }
+      state.signOn = nowHM();
+      state.signOnEpoch = Date.now();
+      state.date = todayISO();
+      showToast('Signed on ' + state.signOn, 'ok');
+    } else if (kind === 'mealOff' || kind === 'mealOn' || kind === 'off') {
+      if (!state.signOn) { showToast('Sign on first.', 'error'); return; }
+      var hm = nowHM();
+      if (kind === 'mealOff') state.mealOff = hm;
+      if (kind === 'mealOn') state.mealOn = hm;
+      if (kind === 'off') state.signOff = hm;
+      showToast(({mealOff:'Meal off ',mealOn:'Meal on ',off:'Signed off '})[kind] + hm, 'ok');
+    }
+    bindDayFields(); renderStamps(); renderClock(); saveDraft();
+  }
+  document.getElementById('btnOn').addEventListener('click', function () { stamp('on'); });
+  document.getElementById('btnMealOff').addEventListener('click', function () { stamp('mealOff'); });
+  document.getElementById('btnMealOn').addEventListener('click', function () { stamp('mealOn'); });
+  document.getElementById('btnOff').addEventListener('click', function () { stamp('off'); });
+
+  // ---------------------------------------------------------- persistence
+  function saveDraft() { try { localStorage.setItem(CFG.DRAFT_KEY, JSON.stringify(state)); } catch (e) {} }
+  function loadDraft() {
+    try {
+      var raw = localStorage.getItem(CFG.DRAFT_KEY);
+      if (!raw) return null;
+      var d = JSON.parse(raw);
+      if (d && d.date) return d;
+    } catch (e) {}
+    return null;
+  }
+  function getLedger() {
+    try {
+      var raw = localStorage.getItem(CFG.LEDGER_KEY);
+      var l = raw ? JSON.parse(raw) : [];
+      return Array.isArray(l) ? l : [];
+    } catch (e) { return []; }
+  }
+  function setLedger(list) { try { localStorage.setItem(CFG.LEDGER_KEY, JSON.stringify(list.slice(0, 400))); } catch (e) {} }
+
+  function upsertInLedger() {
+    var list = getLedger();
+    if (!state.id) state.id = 'ts_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) if (list[i].id === state.id) { idx = i; break; }
+    var rec = JSON.parse(JSON.stringify(state));
+    rec.savedAt = new Date().toISOString();
+    if (idx >= 0) list[idx] = rec; else list.unshift(rec);
+    list.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+    setLedger(list);
+    return rec;
+  }
+
+  // ------------------------------------------------------------- sheet HTML
+  function summaryText(s) {
+    var c = computeHours(s);
+    var ov = decimalHours(s.manual);
+    var hrs = ov !== null ? ov : (c ? c.hours : null);
+    var lines = [];
+    lines.push('SHIFT ' + (s.shift || '—'));
+    lines.push(s.depot || '');
+    lines.push('Date: ' + (s.date || '') + '  ' + dayName(s.date));
+    lines.push('SIGN ON : ' + fmtHM(toMin(s.signOn)));
+    lines.push('MEAL    : ' + fmtHM(toMin(s.mealOff)) + (s.mealOff && s.mealOn ? ' - ' + fmtHM(toMin(s.mealOn)) : '') + (s.mealPlace ? '  ' + s.mealPlace : ''));
+    lines.push('SIGN OFF: ' + fmtHM(toMin(s.signOff)));
+    lines.push('HOURS WORKED: ' + (hrs === null ? '—' : hrs.toFixed(2) + ' (' + fmtDuration(c ? c.totalMin - c.breakMin : 0) + ')'));
+    if (s.bus) lines.push('Bus ID: ' + s.bus);
+    if (crossesMidnight(s.signOn, s.signOff)) lines.push('Note: shift runs past midnight into ' + nextDayISO(s.date));
+    if (s.notes) lines.push('Notes: ' + s.notes);
+    return lines.join('\r\n');
+  }
+
+  function nextDayISO(iso) {
+    var d = new Date((iso || todayISO()) + 'T12:00:00');
+    if (isNaN(d)) return '';
+    d.setDate(d.getDate() + 1);
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
+  function tripBlockHTML(t) {
+    var head = [];
+    if (t.route) head.push('Route: ' + esc(t.route));
+    if (t.ext) head.push('Ext. number: ' + esc(t.ext));
+    if (t.display) head.push('DisplayC: ' + esc(t.display));
+    if (t.block) head.push('Block: ' + esc(t.block));
+    var out = '';
+    if (head.length) out += '<div class="blk-h">' + head.join(' - ') + '</div>';
+    out += '<div class="row"><span class="l">' + esc(t.note || '') + '</span><span class="r num">' +
+      esc(fmtHM(toMin(t.start)) + (t.end ? ' - ' + fmtHM(toMin(t.end)) : '')) + '</span></div>';
+    return out;
+  }
+
+  function buildSheetHTML(s) {
+    var c = computeHours(s);
+    var ov = decimalHours(s.manual);
+    var hrs = ov !== null ? ov : (c ? c.hours : null);
+    var now = new Date().toLocaleString('en-AU', { hour12: false });
+    var blocks = s.trips.filter(function (t) {
+      return t.route || t.ext || t.display || t.start || t.end || t.note;
+    });
+
+    var body = blocks.length
+      ? '<div class="cols">' + blocks.map(tripBlockHTML).join('') + '</div>'
+      : '<div class="row"><span class="l">No trip blocks recorded &mdash; hours sheet only.</span><span class="r"></span></div>';
+
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Timesheet ' + esc(s.shift || s.date) + '</title>' +
+      '<style>' +
+      'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:11px;color:#111;margin:14px;line-height:1.35}' +
+      '.top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:8px}' +
+      '.shift{font-size:19px;font-weight:800;letter-spacing:.5px}' +
+      '.depot{text-align:right;font-weight:700;font-size:11px}' +
+      'table{width:100%;border-collapse:collapse;margin-bottom:8px}' +
+      'td{border:1px solid #999;padding:5px 7px;vertical-align:top}' +
+      'td.k{font-weight:800;font-size:9px;text-transform:uppercase;letter-spacing:.4px;background:#f2f2f2;width:1%}' +
+      '.cols{column-count:2;column-gap:14px;column-rule:1px solid #ccc}' +
+      '.blk-h{font-weight:800;background:#f2f2f2;padding:2px 4px;margin:6px 0 2px;border-left:3px solid #187A35;break-inside:avoid}' +
+      '.row{display:flex;justify-content:space-between;gap:8px;padding:1px 4px;break-inside:avoid}' +
+      '.l{flex:1;white-space:pre-wrap}.r{font-variant-numeric:tabular-nums;font-weight:700}' +
+      '.num{font-variant-numeric:tabular-nums}' +
+      '.foot{margin-top:10px;border-top:1px solid #999;padding-top:5px;font-size:9px;color:#555}' +
+      '@media print{body{margin:8mm}.shift{font-size:16px}}' +
+      '</style></head><body>' +
+      '<div class="top"><div class="shift">SHIFT ' + esc(s.shift || '—') + '</div>' +
+      '<div class="depot">' + esc(s.depot || '') + '<br/>' + esc(dayName(s.date)) + '</div></div>' +
+      '<table>' +
+      '<tr><td class="k">Date</td><td class="num">' + esc(s.date || '') + '</td>' +
+      '<td class="k">Bus ID</td><td class="num">' + esc(s.bus || '') + '</td>' +
+      '<td class="k">Hours worked</td><td class="num"><b>' +
+        (hrs === null ? '—' : hrs.toFixed(2) + '  (' + fmtDuration(c ? c.totalMin - c.breakMin : 0) + ')') +
+        '</b></td></tr>' +
+      '<tr><td class="k">Sign on</td><td class="num">' + esc(fmtHM(toMin(s.signOn))) + '</td>' +
+      '<td class="k">Meal off</td><td class="num">' + esc(fmtHM(toMin(s.mealOff))) + '</td>' +
+      '<td class="k">Sign off</td><td class="num">' + esc(fmtHM(toMin(s.signOff))) + '</td></tr>' +
+      '<tr><td class="k">Meal on</td><td class="num">' + esc(fmtHM(toMin(s.mealOn))) + '</td>' +
+      '<td class="k" colspan="3">Meal taken at</td><td class="num" colspan="2">' + esc(s.mealPlace || '') + '</td></tr>' +
+      (crossesMidnight(s.signOn, s.signOff)
+        ? '<tr><td class="k">Spans</td><td colspan="5">Shift runs past midnight into ' + esc(nextDayISO(s.date)) + '</td></tr>' : '') +
+      (s.notes ? '<tr><td class="k">Notes</td><td colspan="5">' + esc(s.notes) + '</td></tr>' : '') +
+      '</table>' +
+      body +
+      '<div class="foot">Prepared on the device at the times shown. Generated ' + esc(now) +
+      ' from Bus Inspector Timesheet v1.0 · ' + esc(state.id || '') + '</div>' +
+      '</body></html>';
+  }
+
+  function filenameFor(s) {
+    var now = new Date();
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    var safe = String(s.shift || s.bus || s.date || 'shift').replace(/[^a-zA-Z0-9]/g, '_');
+    return 'Timesheet_' + safe + '_' + now.toISOString().slice(0, 19).replace(/:/g, '-') + '.html';
+  }
+
+  // -------------------------------------------------------------- actions
+  function guardComplete(s) {
+    if (!s.signOn || !s.signOff) {
+      showToast('Sign on and sign off are both needed before exporting.', 'error', 4500);
+      return false;
+    }
+    var c = computeHours(s);
+    if (!c && !decimalHours(s.manual)) { showToast('Times do not compute — check sign on/off.', 'error', 4500); return false; }
+    return true;
+  }
+
+  document.getElementById('btnSave').addEventListener('click', function () {
+    if (!guardComplete(state)) return;
+    upsertInLedger();
+    var fn = filenameFor(state);
+    var ok = window.BusEmailSystem
+      ? window.BusEmailSystem.saveFileToDownloads(buildSheetHTML(state), fn, 'text/html', false)
+      : false;
+    showToast(ok ? '✅ Saved ' + fn + ' to Downloads' : 'Save failed — no bridge available', ok ? 'ok' : 'error', 4500);
+  });
+
+  document.getElementById('btnEmail').addEventListener('click', async function () {
+    if (!guardComplete(state)) return;
+    upsertInLedger();
+    var c = computeHours(state);
+    var ov = decimalHours(state.manual);
+    var hrs = ov !== null ? ov : (c ? c.hours : 0);
+    var fn = filenameFor(state);
+    var subject = 'Timesheet ' + (state.shift ? 'Shift ' + state.shift + ' — ' : '') + state.date;
+    var bodyText = summaryText(state) + '\r\n\r\n' +
+      '--------------------------------------------------\r\n' +
+      'Sheet file saved to device Downloads: ' + fn;
+    var sent = false;
+    if (window.sendBusEmail) {
+      sent = await window.sendBusEmail({
+        to: CFG.TARGET,
+        subject: subject,
+        body: bodyText,
+        filename: fn,
+        htmlContent: buildSheetHTML(state)
+      });
+    }
+    showToast(sent ? '✅ Saved ' + fn + ' to Downloads & opened email' : 'Email bridge unavailable', sent ? 'ok' : 'error', 5000);
+  });
+
+  document.getElementById('btnSaveLedger').addEventListener('click', function () {
+    upsertInLedger();
+    showToast('Saved to ledger', 'ok');
+    renderLedger();
+  });
+
+  document.getElementById('btnClear').addEventListener('click', function () {
+    if (!confirm('Clear the current shift? Sessions already saved to the ledger are kept.')) return;
+    state = emptyState();
+    try { localStorage.removeItem(CFG.DRAFT_KEY); } catch (e) {}
+    bindDayFields(); renderTrips(); renderStamps(); renderClock();
+    showToast('Cleared', 'ok');
+  });
+
+  // --------------------------------------------------------------- ledger
+  function monthOf(s) { return (s.date || '').slice(0, 7); }
+  function renderLedger() {
+    var month = document.getElementById('fMonth').value;
+    var list = getLedger().filter(function (s) { return !month || monthOf(s) === month; });
+    var tb = document.getElementById('ledgerBody');
+    tb.innerHTML = '';
+    var total = 0;
+    list.forEach(function (s) {
+      var c = computeHours(s);
+      var ov = decimalHours(s.manual);
+      var h = ov !== null ? ov : (c ? c.hours : 0);
+      total += h;
+      var tr = document.createElement('tr');
+      if (s.id === state.id) tr.className = 'editing';
+      var brk = c ? (c.breakMin / 60) : 0;
+      tr.innerHTML =
+        '<td>' + esc((s.date || '').slice(5)) + '</td>' +
+        '<td>' + esc(dayName(s.date) + shiftDayLabel(s)) + '</td>' +
+        '<td>' + esc(fmtHM(toMin(s.signOn))) + '</td>' +
+        '<td>' + esc(fmtHM(toMin(s.signOff))) + '</td>' +
+        '<td>' + brk.toFixed(2) + '</td>' +
+        '<td class="num"><b>' + h.toFixed(2) + '</b></td>' +
+        '<td><button type="button" class="trip-del" data-rm="' + esc(s.id) + '" aria-label="Delete">×</button></td>';
+      tr.setAttribute('data-open', s.id);
+      tb.appendChild(tr);
+    });
+    if (list.length) {
+      var fr = document.createElement('tr');
+      fr.innerHTML = '<td colspan="5" class="tot">Total — ' + esc(month || 'all') + '</td><td class="tot num">' +
+        (Math.round(total * 100) / 100).toFixed(2) + '</td><td></td>';
+      tb.appendChild(fr);
+    }
+    document.getElementById('ledgerTitle').textContent =
+      (list.length ? list.length + ' session' + (list.length > 1 ? 's' : '') : 'No sessions yet');
+  }
+
+  document.getElementById('ledgerBody').addEventListener('click', function (e) {
+    var rm = e.target.getAttribute('data-rm');
+    if (rm !== null) {
+      if (!confirm('Delete this session?')) return;
+      setLedger(getLedger().filter(function (s) { return s.id !== rm; }));
+      renderLedger();
+      return;
+    }
+    var tr = e.target.closest ? e.target.closest('tr[data-open]') : null;
+    if (tr && tr.getAttribute('data-open')) openSession(tr.getAttribute('data-open'));
+  });
+
+  function openSession(id) {
+    var found = null;
+    getLedger().forEach(function (s) { if (s.id === id) found = s; });
+    if (!found) return;
+    state = found;
+    saveDraft();
+    switchTab('day');
+    bindDayFields(); renderTrips(); renderStamps(); renderClock();
+    showToast('Loaded ' + (state.shift || state.date), 'ok');
+  }
+
+  document.getElementById('btnCsv').addEventListener('click', function () {
+    var month = document.getElementById('fMonth').value;
+    var list = getLedger().filter(function (s) { return !month || monthOf(s) === month; });
+    if (!list.length) { showToast('Nothing to export', 'error'); return; }
+    var rows = [['Date','Day','Start','End','Break (hrs)','Hours worked','Notes']];
+    var total = 0;
+    list.slice().reverse().forEach(function (s) {
+      var c = computeHours(s);
+      var ov = decimalHours(s.manual);
+      var h = ov !== null ? ov : (c ? c.hours : 0);
+      total += h;
+      rows.push([
+        s.date || '', dayName(s.date), fmtHM(toMin(s.signOn)), fmtHM(toMin(s.signOff)),
+        (c ? c.breakMin / 60 : 0).toFixed(2), h.toFixed(2),
+        (crossesMidnight(s.signOn, s.signOff) ? 'runs past midnight into ' + nextDayISO(s.date) + '. ' : '') + (s.notes || '')
+      ]);
+    });
+    rows.push(['Total ' + (month || ''), '', '', '', '', (Math.round(total * 100) / 100).toFixed(2), '']);
+    var csv = rows.map(function (r) {
+      return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\r\n');
+    var fn = 'Timesheet_' + (month || 'all') + '.csv';
+    var ok = window.BusEmailSystem && window.BusEmailSystem.saveFileToDownloads(csv, fn, 'text/csv', false);
+    showToast(ok ? '✅ Saved ' + fn : 'CSV save failed', ok ? 'ok' : 'error');
+  });
+
+  // ----------------------------------------------------------------- tabs
+  function switchTab(which) {
+    var day = which === 'day';
+    document.getElementById('viewDay').style.display = day ? '' : 'none';
+    document.getElementById('viewLedger').style.display = day ? 'none' : '';
+    document.getElementById('tabDay').classList.toggle('active', day);
+    document.getElementById('tabLedger').classList.toggle('active', !day);
+    if (!day) renderLedger();
+  }
+  document.getElementById('tabDay').addEventListener('click', function () { switchTab('day'); });
+  document.getElementById('tabLedger').addEventListener('click', function () { switchTab('ledger'); });
+
+  // ----------------------------------------------------------------- init
+  (function init() {
+    document.getElementById('fMonth').value = todayISO().slice(0, 7);
+    var draft = loadDraft();
+    if (draft) state = draft;
+    if (!state.trips) state.trips = [];
+    bindDayFields(); renderTrips(); renderStamps(); renderClock(); renderLedger();
+    ticker = setInterval(renderClock, 20000);
+    if (!window.AndroidBridge) {
+      document.getElementById('emailHint').textContent =
+        'Bridge not detected — this looks like a browser, so exports fall back to normal file downloads. ' +
+        'Inside the APK they save to /Download and attach to the email.';
+    }
+  })();
+  </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$ProjectDir = "c:\Users\rolan\Downloads\Bus_Inspector"
+$ProjectDir = $PSScriptRoot
 $AppMainDir = Join-Path $ProjectDir "app\src\main"
 $AssetsDir  = Join-Path $AppMainDir "assets"
 $ResDir     = Join-Path $AppMainDir "res"
@@ -33,6 +33,7 @@ $WebFiles = @(
     "incident-report.html",
     "pre-departure-check.html",
     "safety-hazard-report.html",
+    "timesheet.html",
     "android-email.js"
 )
 foreach ($f in $WebFiles) {
@@ -64,8 +65,8 @@ $UnalignedApk = Join-Path $BuildDir "bus_inspector_unaligned.apk"
     --java $GenJavaDir `
     --min-sdk-version 21 `
     --target-sdk-version 34 `
-    --version-code 3 `
-    --version-name "3.0.0" `
+    --version-code 4 `
+    --version-name "3.1.0" `
     -o $UnalignedApk `
     $ResZip
 if ($LASTEXITCODE -ne 0) { throw "aapt2 link failed" }
